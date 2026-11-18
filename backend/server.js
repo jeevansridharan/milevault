@@ -1,9 +1,9 @@
 /**
- * backend/server.js  —  Milestara Oracle Backend
+ * backend/server.js  —  MileVault Oracle Backend
  *
  * ── WHAT THIS SERVER DOES ────────────────────────────────────────────────────
  * This is a small Express server that acts as the trusted "Tally Oracle" for
- * the Milestara protocol on Bitcoin Cash Chipnet.
+ * the MileVault protocol on Bitcoin Cash Chipnet.
  *
  * It exposes ONE route:
  *   POST /api/oracle/sign
@@ -350,7 +350,7 @@ app.post('/api/oracle/sign', async (req, res) => {
 
 app.listen(PORT, () => {
     console.log(`\n╔══════════════════════════════════════════════════════╗`)
-    console.log(`║   🔮  Milestara Oracle Backend                       ║`)
+    console.log(`║   🔮  MileVault Oracle Backend                       ║`)
     console.log(`╠══════════════════════════════════════════════════════╣`)
     console.log(`║   Listening on  http://localhost:${PORT}                 ║`)
     console.log(`║   Health check  http://localhost:${PORT}/health          ║`)

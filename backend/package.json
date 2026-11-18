@@ -1,7 +1,7 @@
 {
-  "name": "milestara-oracle-backend",
+  "name": "milevault-oracle-backend",
   "version": "1.0.0",
-  "description": "Milestara Oracle signing backend for BCH Chipnet milestone releases",
+  "description": "MileVault oracle signing backend for BCH",
   "type": "module",
   "scripts": {
     "start": "node server.js",

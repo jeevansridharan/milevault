@@ -1,7 +1,7 @@
 /**
  * gen-oracle.mjs
  *
- * Generates a fresh Oracle keypair for the Milestara backend.
+ * Generates a fresh Oracle keypair for the MileVault backend.
  * Uses @bitauth/libauth v3 API correctly.
  *
  * Usage:
