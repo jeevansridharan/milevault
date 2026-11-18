@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// MilestoneLock.cash  —  Milestara Week 3 Smart Contract
+// MilestoneLock.cash  —  MileVault Week 3 Smart Contract
 //
 // What this contract does:
 //   • Locks BCH inside this contract when someone funds a project.

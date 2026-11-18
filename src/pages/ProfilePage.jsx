@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Copy, CheckCircle, Wallet, Shield, ExternalLink, LogOut, Key } from 'lucide-react'
+import { explorerAddressUrl, explorerTxUrl, IS_MAINNET } from '../config/network'
 import { useWallet } from '../contexts/WalletContext'
 import { getLockedAmount } from '../services/milestoneContract'
 import { transferGovTokens } from '../services/govService'
@@ -96,7 +97,7 @@ export default function ProfilePage() {
                     <>
                         <InfoRow label="Wallet Address" value={address} mono color="#10b981" />
                         <InfoRow label="BCH Balance" value={`${(balance || 0).toFixed(8)} BCH`} color="#10b981" />
-                        <InfoRow label="Network" value="Bitcoin Cash Chipnet (Testnet)" color="#34d399" />
+                        <InfoRow label="Network" value={IS_MAINNET ? 'Bitcoin Cash Mainnet' : 'Chipnet test network'} color="#34d399" />
                         <InfoRow label="GOV Tokens" value={`${tokens} tokens`} color="#10b981" />
                         <InfoRow label="Locked BCH" value={`${locked.toFixed(8)} BCH`} color="#34d399" />
 
@@ -114,7 +115,7 @@ export default function ProfilePage() {
                                 {copied ? <><CheckCircle size={14} /> Copied!</> : <><Copy size={14} /> Copy Address</>}
                             </button>
                             <a
-                                href={`https://chipnet.imaginary.cash/address/${address}`}
+                                href={explorerAddressUrl(address)}
                                 target="_blank" rel="noreferrer"
                                 style={{
                                     flex: 1, padding: '10px', borderRadius: '10px', cursor: 'pointer',
@@ -269,7 +270,7 @@ export default function ProfilePage() {
                                 {txStatus.msg}
                                 {txStatus.txId && (
                                     <div style={{ marginTop: '4px' }}>
-                                        <a href={`https://chipnet.imaginary.cash/tx/${txStatus.txId}`} target="_blank" rel="noreferrer" style={{ color: '#10b981', textDecoration: 'underline' }}>
+                                        <a href={explorerTxUrl(txStatus.txId)} target="_blank" rel="noreferrer" style={{ color: '#10b981', textDecoration: 'underline' }}>
                                             View TX ↗
                                         </a>
                                     </div>

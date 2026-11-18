@@ -1,5 +1,5 @@
 /**
- * Dashboard.jsx  —  Milestara Project Dashboard (Fully Database-Driven)
+ * Dashboard.jsx  —  MileVault Project Dashboard (Fully Database-Driven)
  *
  * Upgraded UI: modern dark cards, stats with change indicators, recent
  * activity feed, network status bar, animated welcome header.

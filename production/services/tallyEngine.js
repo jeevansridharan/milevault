@@ -16,8 +16,8 @@ import { generateVotingAddresses } from '../scripts/generateVotingAddresses.js';
  * cannot be counted towards Project B.
  *
  * Addresses are derived via:
- *   APPROVE key = SHA256(SHA256("milestara:vote:approve:v1:" + projectId))
- *   REJECT  key = SHA256(SHA256("milestara:vote:reject:v1:"  + projectId))
+ *   APPROVE key = SHA256(SHA256("milevault:vote:approve:v1:" + projectId))
+ *   REJECT  key = SHA256(SHA256("milevault:vote:reject:v1:"  + projectId))
  *   Address = P2PKH(SECP256K1_COMPRESSED_PUBKEY(key))
  *
  * Nobody holds the private keys — tokens sent there are permanently vote-locked.

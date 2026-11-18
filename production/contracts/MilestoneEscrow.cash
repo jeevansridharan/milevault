@@ -3,7 +3,7 @@ pragma cashscript ^0.12.0;
 /**
  * MilestoneEscrow.cash
  * 
- * A non-custodial milestone escrow contract for Milestara.
+ * A non-custodial milestone escrow contract for MileVault.
  * Funds are locked until:
  * 1. Governance Approval: A Tally Oracle signs a proof of milestone completion.
  * 2. Refund: If a deadline passes, the funder can reclaim the funds.

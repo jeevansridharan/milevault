@@ -1,5 +1,5 @@
 /**
- * bchWallet.js — Milestara BCH Wallet Service (Fixed for Chipnet v3)
+ * bchWallet.js — MileVault BCH Wallet Service (Fixed for Chipnet v3)
  *
  * ─── FIXES APPLIED ───────────────────────────────────────────────────────────
  * 1. FIXED MaxListenersExceededWarning: Removed problematic new Connection()
@@ -14,10 +14,11 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import { TestNetWallet, toBch } from 'mainnet-js'
+import { Wallet, TestNetWallet, toBch } from 'mainnet-js'
+import { BCH_NETWORK, GOV_TOKEN_CATEGORY_ID, IS_MAINNET, MAX_FUND_BCH, explorerTxUrl } from '../config/network'
 
 // --- Governance Category ID (Shared) ---
-export const GOV_TOKEN_CATEGORY_ID = '9da68991a0c7c647565c567540a02d41549dad1182284730b9a92e21d7a4c651'
+export { GOV_TOKEN_CATEGORY_ID }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -27,13 +28,7 @@ export const GOV_TOKEN_CATEGORY_ID = '9da68991a0c7c647565c567540a02d41549dad1182
  */
 const CHIPNET_ELECTRUM_WSS = 'wss://chipnet.imaginary.cash:50004'
 
-/**
- * The predefined Chipnet project wallet that RECEIVES funds.
- * Note: Generated fresh for Chipnet v3.
- */
-export const PROJECT_ADDRESS = 'bchtest:qpvjwg6g5ryqqrnjj56d0gknqmnydrxn8seudaqgp7'
-
-const WALLET_STORAGE_KEY = 'milestara_chipnet_wif'
+const WALLET_STORAGE_KEY = `milevault_${BCH_NETWORK}_wif`
 
 // ─── Internal Helper: Configure Chipnet Network (FIXED) ──────────────────────
 
@@ -48,6 +43,7 @@ const WALLET_STORAGE_KEY = 'milestara_chipnet_wif'
  * the server URLs before the first getUtxos() / getBalance() call.
  */
 async function configureChipnetNetwork(wallet) {
+    if (IS_MAINNET) return
     console.log('[bchWallet] Configuring Chipnet network provider...')
     try {
         // mainnet-js v3 approach: override the electrum server URLs on the
@@ -93,10 +89,10 @@ export async function initializeWallet(wif = null) {
 
         if (wif) {
             console.log('[bchWallet] Initializing wallet from WIF (stored or provided)...')
-            wallet = await TestNetWallet.fromWIF(wif)
+            wallet = await (IS_MAINNET ? Wallet : TestNetWallet).fromWIF(wif)
         } else {
             console.log('[bchWallet] Creating new random chipnet wallet...')
-            wallet = await TestNetWallet.newRandom()
+            wallet = await (IS_MAINNET ? Wallet : TestNetWallet).newRandom()
             // 2. Persist new random wallet
             localStorage.setItem(WALLET_STORAGE_KEY, wallet.privateKeyWif)
         }
@@ -182,7 +178,9 @@ export async function getTokenBalance(wallet) {
  * @param {string} [contractAddress] — Optional: CashScript P2SH32 contract address
  */
 export async function fundProject(wallet, amountBch, contractAddress = null) {
-    const destination = contractAddress || PROJECT_ADDRESS
+    const destination = contractAddress
+    if (amountBch > MAX_FUND_BCH) throw new Error(`Funding is capped at ${MAX_FUND_BCH} BCH per transaction.`)
+    if (!destination) throw new Error('This campaign has no escrow contract address yet.')
     console.log(`[bchWallet] Initiating funding: ${amountBch} BCH -> ${destination}`)
     if (contractAddress) {
         console.log('[bchWallet] Sending to CashScript escrow contract (not the static PROJECT_ADDRESS)')
@@ -216,7 +214,7 @@ export function disconnectWallet() {
 }
 
 export function getExplorerUrl(txId) {
-    return `https://chipnet.imaginary.cash/tx/${txId}`
+    return explorerTxUrl(txId)
 }
 
 export function shortenAddress(address) {

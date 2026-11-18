@@ -16,6 +16,8 @@ import {
     shortenAddress,
 } from '../services/bchWallet'
 import { QRCodeCanvas } from 'qrcode.react'
+import { useWizardConnect, WizardConnectQRDialog } from '@wizardconnect/react'
+import { BCH_NETWORK, IS_MAINNET, MAX_FUND_BCH } from '../config/network'
 
 // ── Status icon helpers ─────────────────────────────────────────────────────
 function Spinner() {
@@ -38,6 +40,7 @@ export default function WalletPanel({ onRealFund, onWalletConnect, contractAddre
         disconnect,
         refreshBalance
     } = useWallet()
+
 
     // ── Local UI State ───────────────────────────────────────────────────────
     const [amount, setAmount] = useState('')     // user-typed BCH amount
@@ -80,6 +83,10 @@ export default function WalletPanel({ onRealFund, onWalletConnect, contractAddre
             setUiError('Enter a valid BCH amount greater than 0.')
             return
         }
+        if (parsed > MAX_FUND_BCH) {
+            setUiError(`Funding is capped at ${MAX_FUND_BCH} BCH per transaction.`)
+            return
+        }
         if (balance !== null && parsed > balance) {
             setUiError(`Insufficient balance. You have ${balance.toFixed(8)} BCH.`)
             return
@@ -113,7 +120,7 @@ export default function WalletPanel({ onRealFund, onWalletConnect, contractAddre
 
     if (!wallet) {
         return (
-            <div className="card-glass rounded-2xl p-6 mb-6">
+            <><WizardPanel /><div className="card-glass rounded-2xl p-6 mb-6">
                 <div className="flex items-center gap-3 mb-5">
                     <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)' }}>
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -122,7 +129,7 @@ export default function WalletPanel({ onRealFund, onWalletConnect, contractAddre
                     </div>
                     <div>
                         <h2 className="text-white font-bold text-base">Bitcoin Cash Wallet</h2>
-                        <p className="text-slate-500 text-xs">Chipnet (Testnet · Persistent)</p>
+                        <p className="text-slate-500 text-xs">{BCH_NETWORK === 'mainnet' ? 'Bitcoin Cash Mainnet' : 'Chipnet test network'}</p>
                     </div>
                     <div className="ml-auto flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold" style={{ background: 'rgba(100,116,139,0.12)', border: '1px solid rgba(100,116,139,0.2)', color: '#94a3b8' }}>
                         <div className="w-1.5 h-1.5 rounded-full bg-slate-500"></div>
@@ -171,12 +178,12 @@ export default function WalletPanel({ onRealFund, onWalletConnect, contractAddre
 
                 {uiError && <ErrorBox message={uiError} onClose={() => setUiError('')} />}
                 {contextError && <ErrorBox message={contextError} onClose={() => { }} />}
-            </div>
+            </div></>
         )
     }
 
     return (
-        <div className="card-glass rounded-2xl p-6 mb-6">
+        <><WizardPanel /><div className="card-glass rounded-2xl p-6 mb-6">
             <div className="flex items-center gap-3 mb-5">
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)' }}>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -185,7 +192,7 @@ export default function WalletPanel({ onRealFund, onWalletConnect, contractAddre
                 </div>
                 <div>
                     <h2 className="text-white font-bold text-base">Bitcoin Cash Wallet</h2>
-                    <p className="text-slate-500 text-xs">Chipnet (Testnet · Active Wallet)</p>
+                    <p className="text-slate-500 text-xs">{BCH_NETWORK === 'mainnet' ? 'Bitcoin Cash Mainnet' : 'Chipnet test network'}</p>
                 </div>
                 <div className="ml-auto flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold" style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', color: '#10b981' }}>
                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" style={{ boxShadow: '0 0 5px rgba(52,211,153,0.9)' }}></div>
@@ -195,7 +202,7 @@ export default function WalletPanel({ onRealFund, onWalletConnect, contractAddre
 
             <div className="rounded-xl p-4 mb-4" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
                 <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Your Chipnet Address</span>
+                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Your BCH Address</span>
                     <div className="flex gap-2">
                         <button
                             onClick={() => setShowQr(!showQr)}
@@ -270,31 +277,32 @@ export default function WalletPanel({ onRealFund, onWalletConnect, contractAddre
                 <div className="rounded-xl p-3 mb-4 flex items-start gap-3" style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)' }}>
                     <span className="text-lg">💡</span>
                     <div className="flex-1">
-                        <p className="text-yellow-400 text-xs font-semibold mb-2">Your balance is zero — get free Chipnet BCH!</p>
+                        <p className="text-yellow-400 text-xs font-semibold mb-2">Your balance is zero — get BCH to continue.</p>
                         <div className="flex flex-col gap-1.5">
-                            <a href="https://faucet.paytaca.com" target="_blank" rel="noreferrer"
+                            {!IS_MAINNET && <a href="https://faucet.paytaca.com" target="_blank" rel="noreferrer"
                                 className="flex items-center gap-2 text-xs font-semibold px-2 py-1.5 rounded-lg transition-all"
                                 style={{ background: 'rgba(251,191,36,0.12)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.2)' }}>
                                 <span>🟡</span>
                                 <span>faucet.paytaca.com</span>
-                            </a>
-                            <a href="https://tbch.googol.cash" target="_blank" rel="noreferrer"
+                            </a>}
+                            {!IS_MAINNET && <a href="https://tbch.googol.cash" target="_blank" rel="noreferrer"
                                 className="flex items-center gap-2 text-xs font-semibold px-2 py-1.5 rounded-lg transition-all"
                                 style={{ background: 'rgba(251,191,36,0.12)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.2)' }}>
                                 <span>⚡</span>
                                 <span>tbch.googol.cash</span>
-                            </a>
+                            </a>}
                         </div>
                     </div>
                 </div>
             )}
 
+            {IS_MAINNET && <p role="alert" className="rounded-lg bg-amber-500/10 border border-amber-400/30 p-3 text-amber-200 text-xs mb-4">Mainnet warning: this sends real BCH. Verify the campaign escrow address. Limit: {MAX_FUND_BCH} BCH per transaction.</p>}
             <div className="space-y-3">
                 <div className="relative">
                     <input
                         id="fund-amount-input"
                         type="number"
-                        min="0.0001"
+                        min="0.0001" max={MAX_FUND_BCH}
                         step="0.001"
                         value={amount}
                         onChange={(e) => { setAmount(e.target.value); setUiError(''); setTxStatus('idle'); setTxId('') }}
@@ -306,7 +314,7 @@ export default function WalletPanel({ onRealFund, onWalletConnect, contractAddre
                 </div>
 
                 <div className="flex gap-2">
-                    {['0.001', '0.005', '0.01', '0.05'].map((v) => (
+                    {['0.001', '0.005', '0.01'].filter(v => Number(v) <= MAX_FUND_BCH).map((v) => (
                         <button
                             key={v}
                             onClick={() => { setAmount(v); setUiError(''); setTxStatus('idle'); setTxId('') }}
@@ -329,7 +337,7 @@ export default function WalletPanel({ onRealFund, onWalletConnect, contractAddre
                     ) : (
                         <>
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                            Fund Project on Chipnet
+                            Fund Campaign
                         </>
                     )}
                 </button>
@@ -351,8 +359,21 @@ export default function WalletPanel({ onRealFund, onWalletConnect, contractAddre
                     Disconnect & remove from this browser
                 </button>
             </div>
-        </div>
+        </div></>
     )
+}
+
+function WizardPanel() {
+    const wizard = useWizardConnect({ dappName: 'MileVault' })
+    return <div className="card-glass rounded-2xl p-4 mb-4">
+        <div className="flex items-center justify-between gap-3">
+            <div><strong className="text-white text-sm">WizardConnect</strong><p className="text-slate-400 text-xs mt-1">{wizard.state === 'connected' ? `Connected to ${wizard.walletName || 'BCH wallet'}` : 'Pair a compatible BCH wallet.'}</p></div>
+            {wizard.state === 'connected' ? <button className="text-xs text-slate-300" onClick={() => wizard.disconnect()}>Disconnect</button> : <button className="px-3 py-2 rounded-lg bg-emerald-600 text-white text-xs font-bold" disabled={['connecting','reconnecting'].includes(wizard.state)} onClick={() => wizard.connect()}>Connect Wallet</button>}
+        </div>
+        {wizard.error && <p className="text-rose-300 text-xs mt-2">{wizard.error}</p>}
+        <p className="text-amber-300 text-[11px] mt-2">Campaign transactions still use the separate BCH wallet below; WizardConnect signing is not yet connected.</p>
+        {wizard.uri && wizard.qrUri && <WizardConnectQRDialog show={wizard.state === 'connecting'} onClose={() => wizard.disconnect()} uri={wizard.uri} qrUri={wizard.qrUri} title="Connect to MileVault" subtitle="Scan using a WizardConnect wallet" />}
+    </div>
 }
 
 function ErrorBox({ message, onClose }) {

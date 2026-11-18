@@ -3,7 +3,7 @@ import { TestNetWallet, TokenMintRequest } from 'mainnet-js';
 /**
  * TokenManager Service
  * 
- * Handles CashToken lifecycle for Milestara projects.
+ * Handles CashToken lifecycle for MileVault projects.
  */
 
 // 1 BCH contribution = 100,000 GOV tokens (Standard Unit)

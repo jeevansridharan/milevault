@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { BCH_NETWORK } from '../config/network'
 import { initializeWallet, getBalance, disconnectWallet as serviceDisconnect } from '../services/bchWallet'
 
 const WalletContext = createContext()
@@ -7,7 +8,7 @@ export function WalletProvider({ children }) {
     const [wallet, setWallet] = useState(null)
     const [address, setAddress] = useState('')
     const [balance, setBalance] = useState(() => {
-        const cached = localStorage.getItem('milestara_chipnet_balance')
+        const cached = localStorage.getItem(`milevault_${BCH_NETWORK}_balance`)
         return cached !== null ? parseFloat(cached) : null
     })
     const [loading, setLoading] = useState(false)
@@ -20,7 +21,7 @@ export function WalletProvider({ children }) {
             const bal = await getBalance(targetWallet)
             if (bal !== null) {
                 setBalance(bal)
-                localStorage.setItem('milestara_chipnet_balance', bal.toString())
+                localStorage.setItem(`milevault_${BCH_NETWORK}_balance`, bal.toString())
             }
         } catch (e) {
             console.error('[WalletContext] Balance refresh failed:', e)
@@ -49,7 +50,7 @@ export function WalletProvider({ children }) {
         setWallet(null)
         setAddress('')
         setBalance(null)
-        localStorage.removeItem('milestara_chipnet_balance')
+        localStorage.removeItem(`milevault_${BCH_NETWORK}_balance`)
     }, [])
 
     // Auto-connect on mount if WIF exists in localStorage
@@ -57,7 +58,7 @@ export function WalletProvider({ children }) {
     // Adding `wallet` or `connect` to deps would cause infinite reconnect loops
     // because connect() sets wallet, which triggers the effect again.
     useEffect(() => {
-        const storedWif = localStorage.getItem('milestara_chipnet_wif')
+        const storedWif = localStorage.getItem(`milevault_${BCH_NETWORK}_wif`)
         if (storedWif) {
             connect(storedWif)
         }

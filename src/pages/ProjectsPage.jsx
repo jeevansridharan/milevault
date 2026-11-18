@@ -47,13 +47,12 @@ import ProjectForm from '../components/ProjectForm'
 import Dashboard from '../components/Dashboard'
 import { deployMilestoneEscrow } from '../../production/scripts/deployContract'
 import { generateVotingAddresses } from '../../production/scripts/generateVotingAddresses'
-import { initializeWallet } from '../services/bchWallet'
+import { useWallet } from '../contexts/WalletContext'
 import * as libauth from '@bitauth/libauth'
 
 // ── TODO: Replace with the currently connected wallet address ─────────────────
 // If you have a wallet context/hook, import it here and pass the address down.
 // For now we use a placeholder so the owner_wallet field is never empty.
-const PLACEHOLDER_WALLET = 'bchtest:qp0000000000000000000000000000000000000000'
 
 // <<<<<<< HEAD
 /** 
@@ -97,6 +96,7 @@ async function fetchOraclePubkey() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function ProjectsPage() {
+    const { wallet } = useWallet()
 
     // ── State ─────────────────────────────────────────────────────────────────
 
@@ -181,39 +181,35 @@ export default function ProjectsPage() {
         console.log('[ProjectsPage] handleProjectCreate: calling Supabase insert…')
 
         // ── 1. Initialize Wallet for Keys ────────────────────────────────────
-        let wallet = null;
-        try {
-            wallet = await initializeWallet();
-        } catch (e) {
-            console.warn('[ProjectsPage] Wallet init failed, using placeholders for keys');
-        }
+        if (!wallet) throw new Error('Connect a BCH wallet before creating an on-chain campaign.')
 
         // ── 2. Prepare Public Keys for Contract ──────────────────────────────
         // CashScript requires 33-byte COMPRESSED pubkeys (0x02 or 0x03 prefix).
         // mainnet-js / bchWallet may return:
         //   • 33-byte hex (already compressed)  → use directly
         //   • 65-byte hex (uncompressed, 0x04…) → compress: keep X, derive prefix from Y parity
-        const dummyPkHex = '02' + '0'.repeat(64)  // valid 33-byte placeholder
+        const dummyPkHex = null
 
         function compressPubkeyHex(hex) {
-            if (!hex) return dummyPkHex
+            if (!hex) return null
             // mainnet-js wallet.publicKey returns a Uint8Array, not a string.
             // Convert binary to hex string first if needed.
             let hexStr = hex
             if (hex instanceof Uint8Array || (typeof hex === 'object' && hex !== null && hex.constructor?.name === 'Buffer')) {
                 hexStr = Array.from(hex).map(b => b.toString(16).padStart(2, '0')).join('')
             }
-            if (typeof hexStr !== 'string') return dummyPkHex
+            if (typeof hexStr !== 'string') return null
             const clean = hexStr.replace(/^0x/, '')
             if (clean.length === 66) return clean          // already 33 bytes
-            if (clean.length !== 130 || clean.slice(0, 2) !== '04') return dummyPkHex
+            if (clean.length !== 130 || clean.slice(0, 2) !== '04') return null
             const xHex = clean.slice(2, 66)
             const yLastByte = parseInt(clean.slice(-2), 16)
             const prefix = yLastByte % 2 === 0 ? '02' : '03'
             return prefix + xHex
         }
 
-        const walletPkHex = compressPubkeyHex(wallet?.publicKey)
+        const walletPkHex = compressPubkeyHex(wallet.publicKey)
+        if (!walletPkHex) throw new Error('Connected wallet public key is invalid; campaign creation stopped.')
         const creatorPk = libauth.hexToBin(walletPkHex)
         const funderPk = creatorPk  // Creator is default funder
 
@@ -320,7 +316,7 @@ export default function ProjectsPage() {
             title: projectData.title,
             description: fullDescription,
             goal_amount: projectData.goal_amount,
-            owner_wallet: wallet?.cashaddr ?? projectData.owner_wallet ?? PLACEHOLDER_WALLET,
+            owner_wallet: wallet.cashaddr,
             status: 'active',
         })
 
@@ -393,7 +389,7 @@ export default function ProjectsPage() {
 
     const handleTransaction = async (amount, txHash, type = 'funding', walletAddress) => {
         if (!activeProject) return
-        const finalWallet = walletAddress || PLACEHOLDER_WALLET
+        const finalWallet = walletAddress || wallet?.cashaddr || ''
         console.log(`[ProjectsPage] handleTransaction: ${type} of ${amount} BCH (${txHash}) by ${finalWallet}`)
 
         // 1. Record in transactions table
@@ -431,52 +427,8 @@ export default function ProjectsPage() {
 
     const handleFund = (amount, txHash, walletAddress) => handleTransaction(amount, txHash, 'funding', walletAddress)
 
-    const handleVote = async (milestoneId, voteType) => {
-        // Resolve stable anonymous voter ID from localStorage
-        const key = 'milestara_anon_voter_id'
-        let voterId = localStorage.getItem(key)
-        if (!voterId) {
-            voterId = 'anon_' + Math.random().toString(36).slice(2) + Date.now().toString(36)
-            localStorage.setItem(key, voterId)
-        }
-
-        // ── Pre-check: has this wallet already voted on this milestone? ──────
-        const alreadyVoted = await hasUserVoted(milestoneId, voterId)
-        if (alreadyVoted) {
-            console.info('[ProjectsPage] User has already voted on milestone:', milestoneId)
-            alert('You have already voted on this milestone.')
-            return  // ← exit early, no 409 request, no double-count
-        }
-
-        // ── Insert vote into Supabase ────────────────────────────────────────
-        try {
-            await voteOnMilestone({
-                milestoneId,
-                voterId,
-                vote: voteType === 'yes',
-                votingPower: 1,
-            })
-            console.log(`[ProjectsPage] ✓ Vote '${voteType}' recorded in DB for milestone:`, milestoneId)
-        } catch (voteErr) {
-            console.warn('[ProjectsPage] DB vote failed:', voteErr.message)
-            alert(voteErr.message || 'Vote failed. Please try again.')
-            return  // ← don't update local state if the vote wasn't saved
-        }
-
-        // ── Update local state only after a successful DB write ──────────────
-        setActiveProject(prev => ({
-            ...prev,
-            milestones: prev.milestones?.map(m => {
-                if (m.id !== milestoneId) return m
-                const newVotes = { ...m.votes, [voteType]: (m.votes?.[voteType] ?? 0) + 1 }
-                const total = newVotes.yes + newVotes.no
-                return {
-                    ...m,
-                    votes: newVotes,
-                    status: total > 0 && newVotes.yes / total > 0.5 ? 'Approved' : 'Pending',
-                }
-            }),
-        }))
+    const handleVote = async () => {
+        alert('Voting is unavailable until on-chain tally verification is deployed. No vote was recorded.')
     }
 
     const handleProjectDelete = async (projectId) => {
@@ -525,7 +477,7 @@ export default function ProjectsPage() {
                 </button>
                 <ProjectForm
                     onProjectCreate={handleProjectCreate}
-                    walletAddress={PLACEHOLDER_WALLET}
+                    walletAddress={wallet?.cashaddr || ''}
                 />
             </div>
         )

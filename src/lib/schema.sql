@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════════════════════
--- Milestara — Production SQL Schema v2
+-- MileVault — Production SQL Schema v2
 -- Paste this entire file into Supabase SQL Editor → Run
 -- Safe to run multiple times (idempotent)
 -- ═══════════════════════════════════════════════════════════════════════════════

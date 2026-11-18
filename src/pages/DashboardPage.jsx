@@ -1,6 +1,6 @@
 /**
  * pages/DashboardPage.jsx
- * Overview stats + quick-access cards for the Milestara dashboard.
+ * Overview stats + quick-access cards for the MileVault dashboard.
  * Stats are live-fetched from Supabase on mount.
  */
 
@@ -138,7 +138,7 @@ export default function DashboardPage() {
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
                     <div>
                         <h1 style={{ fontSize: '2rem', fontWeight: 800, color: '#f1f5f9', letterSpacing: '-0.03em', marginBottom: '6px' }}>
-                            Welcome to Milestara
+                            Welcome to MileVault
                         </h1>
                         <p style={{ color: '#64748b', fontSize: '0.95rem' }}>
                             Milestone-based funding platform on Bitcoin Cash Chipnet
@@ -235,7 +235,7 @@ export default function DashboardPage() {
             {/* ── How it works ──────────────────────────────────────────────── */}
             <div style={{ background: 'rgba(15,17,35,0.85)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '28px', backdropFilter: 'blur(20px)' }}>
                 <h2 style={{ color: '#e2e8f0', fontWeight: 700, fontSize: '1rem', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Zap size={18} color="#10b981" /> How Milestara Works
+                    <Zap size={18} color="#10b981" /> How MileVault Works
                 </h2>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '20px' }}>
                     {[

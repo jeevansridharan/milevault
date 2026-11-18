@@ -31,6 +31,8 @@
  */
 
 import { Contract, ElectrumNetworkProvider } from 'cashscript';
+const BCH_NETWORK = process.env.VITE_BCH_NETWORK === 'chipnet' ? 'chipnet' : 'mainnet';
+const EXPLORER_BASE_URL = BCH_NETWORK === 'chipnet' ? 'https://chipnet.imaginary.cash/address' : 'https://blockchair.com/bitcoin-cash/address';
 import { binToHex, hexToBin, secp256k1 }      from '@bitauth/libauth';
 import artifact                               from '../contracts/MilestoneEscrow.json' assert { type: 'json' };
 
@@ -42,7 +44,7 @@ const ORACLE_BASE_URL =
     'http://localhost:3001';
 
 // ── Chipnet block explorer base URL (for human-readable logs) ─────────────────
-const CHIPNET_EXPLORER = 'https://chipnet.imaginary.cash/address';
+
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
@@ -227,7 +229,7 @@ export async function deployMilestoneEscrow(params) {
     // No network call is made here; the provider is used lazily when
     // getBalance() / getUtxos() / send() are called later.
     //
-    const provider = new ElectrumNetworkProvider('chipnet');
+    const provider = new ElectrumNetworkProvider(BCH_NETWORK);
 
     // ── Step 4: Instantiate the Contract ─────────────────────────────────────
     //
@@ -269,10 +271,10 @@ export async function deployMilestoneEscrow(params) {
     const creatorPkHex   = binToHex(creatorPkBytes);
     const oraclePkHex    = binToHex(oraclePkBytes);
 
-    console.group('[MilestoneEscrow] ✅ Contract instantiated on Chipnet');
+    console.group('[MilestoneEscrow] ✅ Contract instantiated on ${BCH_NETWORK}');
     console.log('  Address      :', address);
     console.log('  Token Address:', tokenAddress);
-    console.log('  Explorer     :', `${CHIPNET_EXPLORER}/${address}`);
+    console.log('  Explorer     :', `${EXPLORER_BASE_URL}/${address}`);
     console.log('  Bytecode size:', contract.bytesize, 'bytes /', contract.opcount, 'opcodes');
     console.log('  Params ──────────────────────────────────────');
     console.log('  creatorPk   :', binToHex(creatorPkCompressed));

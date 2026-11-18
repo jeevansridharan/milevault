@@ -46,7 +46,7 @@ export const supabase = supabaseConfigured
         },
         global: {
             headers: {
-                'x-app-name': 'milestara', // shows up in Supabase logs
+                'x-app-name': 'milevault', // shows up in Supabase logs
             },
         },
     })

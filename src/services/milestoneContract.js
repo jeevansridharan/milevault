@@ -1,5 +1,5 @@
 /**
- * milestoneContract.js  —  Milestara Bitcoin Cash Chipnet Service (Production Refactor)
+ * milestoneContract.js  —  MileVault Bitcoin Cash Chipnet Service (Production Refactor)
  *
  * This file handles Chipnet-based governance:
  *   1. Milestone Escrow (BCH locking)
@@ -12,8 +12,8 @@
  * Signatures from a Tally Oracle unlock the milestones.
  */
 
-import { TestNetWallet } from 'mainnet-js'
-import { mintGovTokens, GOV_TOKEN_CATEGORY_ID } from './govService'
+import { BCH_NETWORK, MAX_FUND_BCH } from '../config/network'
+import { GOV_TOKEN_CATEGORY_ID } from './govService'
 import artifact from '../../production/contracts/MilestoneEscrow.json'
 
 // ── Oracle Backend URL ────────────────────────────────────────────────────────
@@ -29,10 +29,10 @@ const MINTING_RATIO = 100000
 
 // Storage keys for UI cache only (Blockchain is source of truth)
 const STORAGE_KEYS = {
-    contractUtxo: 'milestara_chipnet_contract_info',
-    tokenCategory: 'milestara_chipnet_token_id',
-    tokenBalance: 'milestara_chipnet_token_balance',
-    lockedAmount: 'milestara_chipnet_locked_amount',
+    contractUtxo: `milevault_${BCH_NETWORK}_contract_info`,
+    tokenCategory: `milevault_${BCH_NETWORK}_token_id`,
+    tokenBalance: `milevault_${BCH_NETWORK}_token_balance`,
+    lockedAmount: `milevault_${BCH_NETWORK}_locked_amount`,
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -57,43 +57,9 @@ function loadFromStorage(key, defaultValue = null) {
  */
 export async function fundMilestoneContract(wallet, amountBch, projectAddr) {
     if (!wallet) throw new Error('Connect wallet first')
-
-    // 1. Send BCH to the project (In production, this is the Escrow Contract Address)
-    // For now, we use projectAddr which acts as the 'Holding Address'
-    const satoshis = BigInt(Math.round(parseFloat(amountBch) * 1e8))
-    const result = await wallet.send([{ cashaddr: projectAddr, value: satoshis, unit: 'sat' }])
-
-    // 2. Calculate tokens to mint
-    const tokenAmount = Math.floor(amountBch * MINTING_RATIO)
-
-    // 3. REAL ON-CHAIN MINTING
-    // NOTE: In a production environment, VITE_MINTER_WIF would be in .env
-    const MINTER_WIF = import.meta.env.VITE_MINTER_WIF
-
-    let mintResult = { txId: 'simulation_only' }
-    if (MINTER_WIF) {
-        try {
-            mintResult = await mintGovTokens(wallet.cashaddr, amountBch, MINTER_WIF)
-        } catch (mintErr) {
-            console.error('[milestoneContract] Minting failed, continuing without tokens:', mintErr)
-        }
-    } else {
-        console.warn('[milestoneContract] VITE_MINTER_WIF missing. Token minting skipped (simulated only).')
-    }
-
-    // UI CACHE UPDATES
-    const prevLocked = loadFromStorage(STORAGE_KEYS.lockedAmount, 0)
-    saveToStorage(STORAGE_KEYS.lockedAmount, prevLocked + amountBch)
-
-    const prevTokens = loadFromStorage(STORAGE_KEYS.tokenBalance, 0)
-    saveToStorage(STORAGE_KEYS.tokenBalance, prevTokens + tokenAmount)
-
-    return {
-        simulatedTxId: result.txId,
-        mintTxId: mintResult.txId,
-        tokenAmount,
-        tokenCategory: GOV_TOKEN_CATEGORY_ID
-    }
+    if (!projectAddr) throw new Error('Campaign escrow contract is not configured.')
+    if (amountBch > MAX_FUND_BCH) throw new Error(`Funding is capped at ${MAX_FUND_BCH} BCH per transaction.`)
+    throw new Error('Governance funding is disabled until a real CashToken category and secure minter are configured.')
 }
 
 /**
@@ -337,7 +303,7 @@ export async function releaseMilestoneFunds(
                 const FALLBACK_DEADLINE = 2000000  // far-future block height
 
                 // Reconstruct the contract address deterministically
-                const provider = new ElectrumNetworkProvider('chipnet')
+                const provider = new ElectrumNetworkProvider(BCH_NETWORK)
                 const reconstructed = new Contract(
                     artifact,
                     [
@@ -386,7 +352,7 @@ export async function releaseMilestoneFunds(
         const { Contract, ElectrumNetworkProvider, SignatureTemplate } = await import('cashscript')
         const { hexToBin, binToHex } = await import('@bitauth/libauth')
 
-        const provider = new ElectrumNetworkProvider('chipnet')
+        const provider = new ElectrumNetworkProvider(BCH_NETWORK)
 
         if (!wallet.publicKey) throw new Error('Wallet public key missing. Try reconnecting.')
 
@@ -527,7 +493,7 @@ export async function releaseMilestoneFunds(
 
         // Encode as P2PKH cashaddr on chipnet (type 0 = P2PKH)
         const creatorAddrResult = libauth.encodeCashAddress({
-            prefix: 'bchtest',
+            prefix: BCH_NETWORK === 'chipnet' ? 'bchtest' : 'bitcoincash',
             type: 0,
             payload: creatorPkHash,
         })
@@ -616,5 +582,5 @@ export function clearContractState() {
 }
 
 export function chipnetExplorerUrl(txId) {
-    return `https://chipnet.imaginary.cash/tx/${txId}`
+    return BCH_NETWORK === 'chipnet' ? `https://chipnet.imaginary.cash/tx/${txId}` : `https://blockchair.com/bitcoin-cash/transaction/${txId}`
 }

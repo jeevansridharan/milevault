@@ -1,6 +1,6 @@
 /**
  * src/pages/DocsPage.jsx
- * Documentation / How It Works page for Milestara.
+ * Documentation / How It Works page for MileVault.
  * Standalone layout: full-width dark page with a sticky left ToC sidebar.
  */
 
@@ -121,9 +121,9 @@ function Overview() {
 
     return (
         <Section id="overview">
-            <SectionHeading tag="Overview" label="What is Milestara?" />
+            <SectionHeading tag="Overview" label="What is MileVault?" />
             <p style={{ color: '#94a3b8', fontSize: '1rem', lineHeight: 1.75, marginBottom: '32px', maxWidth: '680px' }}>
-                Milestara is a <strong style={{ color: TEXT }}>trustless milestone-based crowdfunding protocol</strong> built on Bitcoin Cash.
+                MileVault is a <strong style={{ color: TEXT }}>trustless milestone-based crowdfunding protocol</strong> built on Bitcoin Cash.
                 Project creators define milestones upfront and lock funds in a smart contract.
                 Contributors earn governance tokens to vote on milestone completion. Verified milestones
                 trigger an automatic on-chain fund release — no middlemen, no escrow agents.
@@ -165,7 +165,7 @@ function Flow() {
         {
             num: '04', icon: '🔮', color: PURPLE,
             title: 'Oracle Approves',
-            desc: "The Milestara tally oracle reads the on-chain vote result, verifies the quorum is met, and generates a cryptographic signature (a \"release proof\") using its private key.",
+            desc: "The MileVault tally oracle reads the on-chain vote result, verifies the quorum is met, and generates a cryptographic signature (a \"release proof\") using its private key.",
             detail: 'Oracle signs: keccak256(projectId + milestoneId + voteResult)',
         },
         {
@@ -330,7 +330,7 @@ function Governance() {
         {
             icon: '🛡️', color: PURPLE,
             title: 'Oracle Protection',
-            body: 'Even if a vote passes on-chain, funds are not released until the Milestara oracle independently verifies the tally and issues a cryptographic signature. This prevents vote manipulation and smart contract bugs from draining funds.',
+            body: 'Even if a vote passes on-chain, funds are not released until the MileVault oracle independently verifies the tally and issues a cryptographic signature. This prevents vote manipulation and smart contract bugs from draining funds.',
         },
     ]
 
@@ -338,7 +338,7 @@ function Governance() {
         <Section id="governance">
             <SectionHeading tag="Governance" label="Token-Weighted Voting" color={PURPLE} />
             <p style={{ color: '#94a3b8', fontSize: '0.95rem', lineHeight: 1.75, marginBottom: '28px', maxWidth: '660px' }}>
-                Milestara governance is fully on-chain. GOV tokens give holders proportional voting
+                MileVault governance is fully on-chain. GOV tokens give holders proportional voting
                 power over milestone completion. The oracle acts as a final safeguard.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -397,15 +397,15 @@ function FAQ() {
     const items = [
         {
             q: 'Is this on mainnet?',
-            a: 'Currently Milestara runs on the BCH Chipnet testnet only. Chipnet is a dedicated Bitcoin Cash test network with real CashScript contracts but no real-money BCH. Mainnet deployment is coming soon after audits complete.',
+            a: 'Currently MileVault runs on the BCH Chipnet testnet only. Chipnet is a dedicated Bitcoin Cash test network with real CashScript contracts but no real-money BCH. Mainnet deployment is coming soon after audits complete.',
         },
         {
             q: 'What is the oracle?',
-            a: 'The oracle is a trusted off-chain backend service operated by the Milestara team. It monitors on-chain votes, verifies quorum is reached, and issues a cryptographic signature (datasig) that the escrow contract requires to release funds. Future versions aim to decentralise the oracle role.',
+            a: 'The oracle is a trusted off-chain backend service operated by the MileVault team. It monitors on-chain votes, verifies quorum is reached, and issues a cryptographic signature (datasig) that the escrow contract requires to release funds. Future versions aim to decentralise the oracle role.',
         },
         {
             q: 'Can funds be stolen or misused?',
-            a: 'No. Funds can only leave the escrow contract via the releaseMilestone function, which requires both a valid oracle signature AND a passed community vote. Even Milestara admins cannot drain the contract — the contract code is immutable once deployed.',
+            a: 'No. Funds can only leave the escrow contract via the releaseMilestone function, which requires both a valid oracle signature AND a passed community vote. Even MileVault admins cannot drain the contract — the contract code is immutable once deployed.',
         },
         {
             q: 'What wallet do I need?',
@@ -574,7 +574,7 @@ export default function DocsPage() {
                                 fontSize: '16px', fontWeight: 800, color: '#fff',
                                 boxShadow: `0 0 14px rgba(16,185,129,0.3)`,
                             }}>M</div>
-                            <span style={{ fontWeight: 800, fontSize: '1rem', color: TEXT }}>Milestara</span>
+                            <span style={{ fontWeight: 800, fontSize: '1rem', color: TEXT }}>MileVault</span>
                         </a>
                         <div style={{ width: '1px', height: '20px', background: BORDER }} />
                         <span style={{ fontSize: '0.875rem', fontWeight: 600, color: MUTED }}>Documentation</span>
@@ -617,7 +617,7 @@ export default function DocsPage() {
                     <h1 style={{ fontSize: 'clamp(2rem,5vw,3rem)', fontWeight: 900, letterSpacing: '-0.04em', color: TEXT, marginBottom: '16px', lineHeight: 1.1 }}>
                         How{' '}
                         <span style={{ background: `linear-gradient(135deg, ${GREEN}, ${GREEN_LIGHT})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-                            Milestara
+                            MileVault
                         </span>{' '}
                         Works
                     </h1>
@@ -648,7 +648,7 @@ export default function DocsPage() {
                 padding: '24px 32px', textAlign: 'center',
             }}>
                 <span style={{ color: MUTED, fontSize: '0.78rem' }}>
-                    © {new Date().getFullYear()} Milestara ·{' '}
+                    © {new Date().getFullYear()} MileVault ·{' '}
                     <span style={{ color: GREEN, fontWeight: 600 }}>Built on Bitcoin Cash</span>
                 </span>
             </div>

@@ -72,7 +72,7 @@ export default function GovernancePage() {
                     tokens: tCount,
                     balance: balance || 0,
                     votes: dbVotesCount || 0,
-                    approved: `4/12 (Verified)`
+                    approved: '0/0'
                 })
             } catch (err) {
                 console.error('[GovernancePage] Load error:', err)
@@ -98,7 +98,7 @@ export default function GovernancePage() {
                     Governance
                 </h1>
                 <p style={{ color: '#64748b', fontSize: '0.9rem' }}>
-                    Native On-Chain voting powered by Cash Tokens on Bitcoin Cash Chipnet.
+                    On-chain voting is currently unavailable until the tally service is verified.
                 </p>
             </div>
 
@@ -107,7 +107,7 @@ export default function GovernancePage() {
                 {[
                     { label: 'Token Balance', value: stats.tokens.toLocaleString() + ' GOV', color: '#10b981' },
                     { label: 'BCH Balance', value: (stats.balance || 0).toFixed(4) + ' BCH', color: '#06b6d4' },
-                    { label: 'Blockchain Votes', value: stats.votes, color: '#34d399' },
+                    { label: 'Database Vote Rows', value: stats.votes, color: '#34d399' },
                     { label: 'Milestone Status', value: stats.approved, color: '#c084fc' },
                 ].map(({ label, value, color }) => (
                     <div key={label} style={{ background: 'rgba(15,17,35,0.85)', border: `1px solid ${color}20`, borderRadius: '14px', padding: '20px', backdropFilter: 'blur(20px)', textAlign: 'center' }}>

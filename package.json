@@ -1,5 +1,5 @@
 {
-  "name": "bch",
+  "name": "milevault",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -12,6 +12,9 @@
   "dependencies": {
     "@cashscript/utils": "^0.12.1",
     "@supabase/supabase-js": "^2.97.0",
+    "@wizardconnect/core": "^0.2.11",
+    "@wizardconnect/dapp": "^0.2.8",
+    "@wizardconnect/react": "^0.2.7",
     "cashscript": "^0.12.1",
     "ethers": "^6.16.0",
     "lucide-react": "^0.575.0",
@@ -35,17 +38,17 @@
     "tailwindcss": "^4.2.0",
     "vite": "^7.3.1"
   },
-  "description": "## 📦 What Was Added (Week 3)",
+  "description": "Milestone based crowdfunding on Bitcoin Cash",
   "main": "eslint.config.js",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jeevansridharan/bch1.git"
+    "url": "git+https://github.com/jeevansridharan/milevault.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/jeevansridharan/bch1/issues"
+    "url": "https://github.com/jeevansridharan/milevault/issues"
   },
-  "homepage": "https://github.com/jeevansridharan/bch1#readme"
+  "homepage": "https://github.com/jeevansridharan/milevault#readme"
 }

@@ -1,5 +1,5 @@
 /**
- * Sidebar.jsx — Milestara left navigation sidebar
+ * Sidebar.jsx — MileVault left navigation sidebar
  * Collapsible · Active route highlighting · Smooth transitions
  */
 
@@ -88,7 +88,7 @@ export default function Sidebar() {
                 {!collapsed && (
                     <div style={{ overflow: 'hidden', whiteSpace: 'nowrap' }}>
                         <span style={{ color: '#fff', fontWeight: 800, fontSize: '1.1rem', letterSpacing: '-0.02em' }}>
-                            Milestara
+                            MileVault
                         </span>
                         <div style={{
                             fontSize: '0.65rem',

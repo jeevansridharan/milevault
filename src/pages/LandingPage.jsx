@@ -1,12 +1,13 @@
 /**
  * src/pages/LandingPage.jsx
- * Professional marketing landing page for Milestara.
+ * Professional marketing landing page for MileVault.
  * Standalone page — no sidebar Layout wrapper.
  */
 
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase, supabaseConfigured } from '../lib/supabase'
+import { BCH_NETWORK, IS_MAINNET, MAX_FUND_BCH } from '../config/network'
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 const GREEN = '#10b981'
@@ -66,7 +67,7 @@ function Navbar() {
 
     return (
         <nav style={{
-            position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000,
+            position: 'fixed', top: 42, left: 0, right: 0, zIndex: 1000,
             transition: 'all 0.3s ease',
             background: scrolled ? 'rgba(10,10,15,0.95)' : 'transparent',
             backdropFilter: scrolled ? 'blur(20px)' : 'none',
@@ -78,8 +79,8 @@ function Navbar() {
                 {/* Logo */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
                     <img
-                        src="/milestara-logo.png"
-                        alt="Milestara Logo"
+                        src="/milevault-logo.png"
+                        alt="MileVault Logo"
                         style={{
                             width: '44px', height: '44px', borderRadius: '10px',
                             objectFit: 'cover',
@@ -88,7 +89,7 @@ function Navbar() {
                         }}
                     />
                     <div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: 800, color: TEXT_PRIMARY, letterSpacing: '-0.02em', lineHeight: 1 }}>Milestara</div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 800, color: TEXT_PRIMARY, letterSpacing: '-0.02em', lineHeight: 1 }}>MileVault</div>
                         <div style={{
                             fontSize: '0.6rem', fontWeight: 700, color: GREEN,
                             background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)',
@@ -623,11 +624,11 @@ function Footer() {
                     <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
                             <img
-                                src="/milestara-logo.png"
-                                alt="Milestara"
+                                src="/milevault-logo.png"
+                                alt="MileVault"
                                 style={{ width: '36px', height: '36px', borderRadius: '8px', objectFit: 'cover' }}
                             />
-                            <span style={{ fontWeight: 800, fontSize: '1rem', color: TEXT_PRIMARY }}>Milestara</span>
+                            <span style={{ fontWeight: 800, fontSize: '1rem', color: TEXT_PRIMARY }}>MileVault</span>
                         </div>
                         <p style={{ color: TEXT_MUTED, fontSize: '0.825rem', maxWidth: '240px', lineHeight: 1.6 }}>
                             Milestone-based crowdfunding secured by Bitcoin Cash smart contracts.
@@ -672,7 +673,7 @@ function Footer() {
                             {[
                                 { label: 'GitHub', href: 'https://github.com/jeevansridharan' },
                                 { label: 'Twitter', href: 'https://twitter.com/jovan_0406' },
-                                { label: 'Contact', href: 'mailto:contact@milestara.io' },
+                                { label: 'Contact', href: 'mailto:contact@milevault.app' },
                             ].map(({ label, href }) => (
                                 <div key={label} style={{ marginBottom: '10px' }}>
                                     <a href={href} target="_blank" rel="noopener noreferrer"
@@ -693,7 +694,7 @@ function Footer() {
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px',
                 }}>
                     <span style={{ fontSize: '0.78rem', color: TEXT_MUTED }}>
-                        © {new Date().getFullYear()} Milestara. All rights reserved.
+                        © {new Date().getFullYear()} MileVault. All rights reserved.
                     </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: `linear-gradient(135deg, ${GREEN_DARK}, ${GREEN})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', fontWeight: 800, color: '#fff' }}>₿</div>

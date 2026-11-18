@@ -1,5 +1,5 @@
 /**
- * GovernancePanel.jsx  —  Milestara Bitcoin Cash Chipnet UI
+ * GovernancePanel.jsx  —  MileVault Bitcoin Cash Chipnet UI
  *
  * This panel shows:
  *   1. Current GOV token balance
@@ -19,7 +19,7 @@ import {
     chipnetExplorerUrl,
     clearContractState,
 } from '../services/milestoneContract'
-import { PROJECT_ADDRESS, getTokenBalance } from '../services/bchWallet'
+import { getTokenBalance } from '../services/bchWallet'
 import { scanVotes } from '../services/govService'
 import { voteOnMilestone } from '../lib/db/votes'
 
@@ -115,16 +115,12 @@ export default function GovernancePanel({
             // ✅ FIX: Send BCH to the CashScript contract address (not the static PROJECT_ADDRESS).
             // contractAddress comes from the DB contracts table (set at project deploy time).
             // Fallback to PROJECT_ADDRESS only for legacy projects with no on-chain contract.
-            const destination = contractAddress || PROJECT_ADDRESS
-            if (!contractAddress) {
-                console.warn('[GovernancePanel] ⚠ contractAddress not set — falling back to PROJECT_ADDRESS. Funds will NOT be releasable via the contract.')
-            } else {
-                console.log('[GovernancePanel] ✓ Locking BCH into contract:', contractAddress)
-            }
+            const destination = contractAddress
+            if (!destination) throw new Error('Campaign escrow contract is not configured. Funding is disabled for this campaign.')
             const result = await fundMilestoneContract(wallet, parsed, destination)
             setMintResult(result)
             if (onTransaction) {
-                onTransaction(parsed, result.simulatedTxId, 'funding')
+                onTransaction(parsed, result.txId, 'funding')
             }
             await refreshState()
         } catch (e) {
@@ -251,13 +247,13 @@ export default function GovernancePanel({
 
                     {mintResult && (
                         <div className="mt-3 p-3 rounded-xl" style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)' }}>
-                            <p className="text-emerald-300 text-xs font-semibold mb-1">✅ Tokens Minted!</p>
+                            <p className="text-emerald-300 text-xs font-semibold mb-1">On-chain funding transaction sent</p>
                             <p className="text-slate-400 text-xs">You received <strong className="text-emerald-400">{mintResult.tokenAmount} GOV tokens</strong></p>
                             <p className="text-slate-500 text-xs mt-0.5 font-mono break-all">
                                 Token ID: {mintResult.tokenCategory.slice(0, 16)}...
                             </p>
                             <a
-                                href={chipnetExplorerUrl(mintResult.simulatedTxId)}
+                                href={chipnetExplorerUrl(mintResult.txId)}
                                 target="_blank" rel="noreferrer"
                                 className="text-emerald-400 text-xs underline"
                             >
@@ -273,8 +269,8 @@ export default function GovernancePanel({
                     <p className="text-white font-semibold text-sm mb-1 flex items-center gap-2">
                         <span>🗳️</span> Step 2 — Token-Weighted Governance Voting
                     </p>
-                    <p className="text-slate-500 text-xs mb-4 leading-relaxed">
-                        Use your GOV tokens to vote on milestones. &gt;50% YES unlocks release.
+                    <p className="text-amber-300 text-xs mb-4 leading-relaxed">
+                        Voting is disabled until on-chain vote tally is configured. The previous database vote path was not verifiable on chain.
                     </p>
 
                     <div className="flex items-center gap-3 mb-5 p-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
@@ -301,10 +297,7 @@ export default function GovernancePanel({
                             const votes = { yes: m.voteYes ?? m.votes?.yes ?? 0, no: m.voteNo ?? m.votes?.no ?? 0 }
                             const total = votes.yes + votes.no
                             // Check DB approval flag OR status string OR on-chain tally
-                            const approved =
-                                m.approved === true ||
-                                m.status === 'Approved' || m.status === 'approved' ||
-                                (total > 0 && (votes.yes / total) > 0.5)
+                            const approved = false // No release is enabled from database-only vote state.
                             const txId = releaseTxId[m.id]
 
                             return (
@@ -342,14 +335,14 @@ export default function GovernancePanel({
                                         <div className="flex gap-2">
                                             <button
                                                 onClick={() => handleVote(m.id, 'yes')}
-                                                disabled={voteLoading === m.id + 'yes' || tokenBal < voteTokens}
+                                                disabled
                                                 className="flex-1 py-2 rounded-xl font-bold text-sm text-white gradient-btn-green flex items-center justify-center gap-1.5 disabled:opacity-50"
                                             >
                                                 {voteLoading === m.id + 'yes' ? <Spinner /> : '👍'} YES
                                             </button>
                                             <button
                                                 onClick={() => handleVote(m.id, 'no')}
-                                                disabled={voteLoading === m.id + 'no' || tokenBal < voteTokens}
+                                                disabled
                                                 className="flex-1 py-2 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-1.5 disabled:opacity-50"
                                                 style={{ background: 'rgba(225,29,72,0.1)', border: '1px solid rgba(225,29,72,0.2)', color: '#f43f5e' }}
                                             >

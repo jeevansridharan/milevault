@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react'
 import { ArrowUpRight, ArrowDownLeft, RotateCcw, ExternalLink, Clock } from 'lucide-react'
 import { supabase, supabaseConfigured } from '../lib/supabase'
+import { explorerTxUrl } from '../config/network'
 
 // ── Badge per type ────────────────────────────────────────────────────────────
 const TYPE_META = {
@@ -16,7 +17,7 @@ const TYPE_META = {
 
 function TxRow({ tx }) {
     const meta = TYPE_META[tx.type] ?? TYPE_META.funding
-    const explorerUrl = `https://chipnet.imaginary.cash/tx/${tx.tx_hash}`
+    const explorerUrl = explorerTxUrl(tx.tx_hash)
     const date = new Date(tx.created_at).toLocaleString()
 
     return (

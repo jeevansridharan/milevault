@@ -1,5 +1,5 @@
 /**
- * govService.ts — Milestara On-Chain Governance Service
+ * govService.ts — MileVault On-Chain Governance Service
  *
  * Handles CashTokens lifecycle on Bitcoin Cash Chipnet:
  * 1. Minting GOV tokens upon funding
@@ -22,16 +22,17 @@
  */
 
 import { ElectrumNetworkProvider } from 'cashscript';
+import { BCH_NETWORK, GOV_TOKEN_CATEGORY_ID } from '../config/network';
 // No top-level mainnet-js imports to avoid side-effects
 
 // --- Constants ---
 
-// The Unique ID for the Milestara Governance Token (Chipnet)
+// The Unique ID for the MileVault Governance Token (Chipnet)
 // Replace with your actual category ID after the genesis/mint transaction.
-export const GOV_TOKEN_CATEGORY_ID = '9da68991a0c7c647565c567540a02d41549dad1182284730b9a92e21d7a4c651';
+export { GOV_TOKEN_CATEGORY_ID };
 
 // Chipnet Electrum endpoint
-const CHIPNET_WSS = 'wss://chipnet.imaginary.cash:50004';
+
 
 // Minting Ratio: 1 BCH = 100,000 GOV tokens
 const MINTING_RATIO = 100000;
@@ -156,7 +157,7 @@ export async function scanVotes(projectId?: string): Promise<VoteStats> {
 
         // 2. Use cashscript ElectrumNetworkProvider — handles empty addresses correctly
         const { ElectrumNetworkProvider } = await import('cashscript');
-        const provider = new ElectrumNetworkProvider('chipnet');
+        const provider = new ElectrumNetworkProvider(BCH_NETWORK);
 
         // 3. Fetch UTXOs — each address gets its own try/catch so one failure
         //    doesn't silence the other.

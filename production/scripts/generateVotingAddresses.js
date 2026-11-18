@@ -20,10 +20,11 @@
  */
 
 import * as libauth from '@bitauth/libauth';
+const CASHADDR_PREFIX = process.env.VITE_BCH_NETWORK === 'chipnet' ? 'bchtest' : 'bitcoincash';
 
 // Domain salt — keeps project vote keys separate from any wallet keys
-const APPROVE_SALT = 'milestara:vote:approve:v1';
-const REJECT_SALT = 'milestara:vote:reject:v1';
+const APPROVE_SALT = 'milevault:vote:approve:v1';
+const REJECT_SALT = 'milevault:vote:reject:v1';
 
 /**
  * deriveP2PKHAddress(seed32)
@@ -48,12 +49,12 @@ async function deriveP2PKHAddress(seed32) {
 
     // 3. Encode as cashaddr (P2PKH, testnet/chipnet prefix = "bchtest")
     const address = libauth.encodeCashAddress({
-        prefix: 'bchtest',
+        prefix: CASHADDR_PREFIX,
         type: 0, // 0 = P2PKH
         payload: pkHash,
     });
 
-    if (typeof address === 'string' && address.startsWith('bchtest:')) {
+    if (typeof address === 'string' && address.startsWith(`${CASHADDR_PREFIX}:`)) {
         return address;
     }
 

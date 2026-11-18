@@ -3,7 +3,7 @@
  *
  * All Supabase operations for the `users` table.
  *
- * In Milestara, a "user" is identified by their Ethereum wallet address.
+ * In MileVault, a "user" is identified by their Ethereum wallet address.
  * No email/password — the wallet IS the identity (Web3 pattern).
  *
  * Schema (run in Supabase SQL Editor):
