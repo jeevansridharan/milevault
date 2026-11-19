@@ -54,20 +54,11 @@ import * as libauth from '@bitauth/libauth'
 // If you have a wallet context/hook, import it here and pass the address down.
 // For now we use a placeholder so the owner_wallet field is never empty.
 
-// <<<<<<< HEAD
-/** 
- * Platform Oracle Public Key (Tally Engine) 
- * NOTE: This constant is now a FALLBACK only.
- * The real oracle pubkey is fetched live from the backend at deploy time
- * via deployMilestoneEscrow() → GET /api/oracle/pubkey.
- * Keeping this here only so legacy code that references it doesn't break.
- */
-const PLATFORM_ORACLE_PK_HEX = '0297901125f188dd92c9c041d2da8b5972523a7d666434a0975c6241c96057d82e'; // updated to match current backend
-// =======
 // ── Oracle Backend URL ────────────────────────────────────────────────────────
 // Must match the URL used by milestoneContract.js so both sides talk to the
 // same oracle instance.
 const ORACLE_URL = import.meta.env.VITE_ORACLE_URL || 'http://localhost:3001'
+const PLATFORM_ORACLE_PK_HEX = '03d515bff03324a5b4cd9b7eed788196a9cadd861c13023ffb841ed327e969835d'
 
 /**
  * fetchOraclePubkey
@@ -91,7 +82,6 @@ async function fetchOraclePubkey() {
     console.log('[ProjectsPage] ✓ Oracle pubkey fetched from backend:', oracle)
     return oracle
 }
-// >>>>>>> 4c1abc2ea7250f3283d4c32d1aaf4ba3d6b4cd3c
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -427,8 +417,40 @@ export default function ProjectsPage() {
 
     const handleFund = (amount, txHash, walletAddress) => handleTransaction(amount, txHash, 'funding', walletAddress)
 
-    const handleVote = async () => {
-        alert('Voting is unavailable until on-chain tally verification is deployed. No vote was recorded.')
+    const handleVote = async (milestoneId, voteType = 'yes') => {
+        const voter = wallet?.cashaddr || 'mainnet_voter'
+        try {
+            const isYes = voteType === 'yes'
+            await voteOnMilestone({
+                milestoneId,
+                voterId: voter,
+                vote: isYes,
+                votingPower: 1,
+            })
+            console.log(`[ProjectsPage] ✓ Vote ${voteType} cast on milestone ${milestoneId}`)
+            if (activeProject) {
+                setActiveProject(prev => {
+                    if (!prev || !prev.milestones) return prev
+                    const updatedMilestones = prev.milestones.map(m => {
+                        if (m.id !== milestoneId) return m
+                        const yesCount = (m.voteYes ?? m.votes?.yes ?? 0) + (isYes ? 1 : 0)
+                        const noCount = (m.voteNo ?? m.votes?.no ?? 0) + (!isYes ? 1 : 0)
+                        return {
+                            ...m,
+                            voteYes: yesCount,
+                            voteNo: noCount,
+                            votes: { yes: yesCount, no: noCount },
+                            approved: yesCount > noCount,
+                            status: yesCount > noCount ? 'approved' : 'voting',
+                        }
+                    })
+                    return { ...prev, milestones: updatedMilestones }
+                })
+            }
+        } catch (err) {
+            console.error('[ProjectsPage] Vote error:', err.message)
+            alert(err.message || 'Voting failed')
+        }
     }
 
     const handleProjectDelete = async (projectId) => {

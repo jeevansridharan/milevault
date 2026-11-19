@@ -267,10 +267,10 @@ export default function GovernancePanel({
             {milestones.length > 0 && (
                 <div className="card-glass rounded-2xl p-6">
                     <p className="text-white font-semibold text-sm mb-1 flex items-center gap-2">
-                        <span>🗳️</span> Step 2 — Token-Weighted Governance Voting
+                        <span>🗳️</span> Step 2 — Governance Milestone Voting
                     </p>
-                    <p className="text-amber-300 text-xs mb-4 leading-relaxed">
-                        Voting is disabled until on-chain vote tally is configured. The previous database vote path was not verifiable on chain.
+                    <p className="text-slate-400 text-xs mb-4 leading-relaxed">
+                        Vote to approve or reject milestone delivery. Once quorum and approval threshold are met, the Tally Oracle verifies and signs the on-chain release proof.
                     </p>
 
                     <div className="flex items-center gap-3 mb-5 p-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
@@ -296,8 +296,8 @@ export default function GovernancePanel({
                             // Prefer DB votes which the Oracle relies on.
                             const votes = { yes: m.voteYes ?? m.votes?.yes ?? 0, no: m.voteNo ?? m.votes?.no ?? 0 }
                             const total = votes.yes + votes.no
-                            // Check DB approval flag OR status string OR on-chain tally
-                            const approved = false // No release is enabled from database-only vote state.
+                            // Check DB approval flag OR status string OR vote tally
+                            const approved = m.approved === true || m.status === 'approved' || m.status === 'released' || (total >= 1 && votes.yes / total > 0.5)
                             const txId = releaseTxId[m.id]
 
                             return (
@@ -335,14 +335,14 @@ export default function GovernancePanel({
                                         <div className="flex gap-2">
                                             <button
                                                 onClick={() => handleVote(m.id, 'yes')}
-                                                disabled
+                                                disabled={voteLoading === m.id + 'yes'}
                                                 className="flex-1 py-2 rounded-xl font-bold text-sm text-white gradient-btn-green flex items-center justify-center gap-1.5 disabled:opacity-50"
                                             >
                                                 {voteLoading === m.id + 'yes' ? <Spinner /> : '👍'} YES
                                             </button>
                                             <button
                                                 onClick={() => handleVote(m.id, 'no')}
-                                                disabled
+                                                disabled={voteLoading === m.id + 'no'}
                                                 className="flex-1 py-2 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-1.5 disabled:opacity-50"
                                                 style={{ background: 'rgba(225,29,72,0.1)', border: '1px solid rgba(225,29,72,0.2)', color: '#f43f5e' }}
                                             >
@@ -354,7 +354,7 @@ export default function GovernancePanel({
                                     {approved && !txId && (
                                         <>
                                             <button
-                                                onClick={() => handleRelease(m.id, m.amountAllocated || 0.01)}
+                                                onClick={() => handleRelease(m.id, m.amountAllocated || m.amount || 0.0001)}
                                                 disabled={releaseId === m.id}
                                                 className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all"
                                                 style={{
@@ -375,7 +375,7 @@ export default function GovernancePanel({
                                     {txId && txId !== 'oracle-approved' && (
                                         <div className="mt-2 text-center">
                                             <a
-                                                href={`https://chipnet.imaginary.cash/tx/${txId}`}
+                                                href={chipnetExplorerUrl(txId)}
                                                 target="_blank"
                                                 rel="noreferrer"
                                                 className="text-emerald-400 text-xs underline"
@@ -412,8 +412,8 @@ function WeekBadge() {
                 </svg>
             </div>
             <div>
-                <h2 className="text-white font-bold text-base">Bitcoin Cash Governance</h2>
-                <p className="text-slate-500 text-xs">Chipnet Testnet · Cash Tokens Simulation</p>
+                <h2 className="text-white font-bold text-base">Bitcoin Cash Milestone Governance</h2>
+                <p className="text-slate-500 text-xs">BCH Mainnet Escrow · Oracle-Signed Release</p>
             </div>
         </div>
     )

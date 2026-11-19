@@ -22,6 +22,7 @@ import MilestoneCard from './MilestoneCard'
 import { scanVotes } from '../services/govService'
 import { castVote } from '../services/milestoneContract'
 import { supabase, supabaseConfigured } from '../lib/supabase'
+import { BCH_NETWORK, IS_MAINNET } from '../config/network'
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 const GREEN      = '#10b981'
@@ -254,12 +255,27 @@ function NetworkStatusBar() {
     const refresh = useCallback(async () => {
         setUpdatedAt(null)
         try {
-            const [bRes] = await Promise.allSettled([
-                fetch('https://chipnet.imaginary.cash/api/blocks/tip/height').then(r => r.ok ? r.text() : null),
-            ])
-            if (bRes.status === 'fulfilled' && bRes.value) setBlockHeight(parseInt(bRes.value.trim(), 10))
+            const url = IS_MAINNET
+                ? 'https://api.blockchair.com/bitcoin-cash/stats'
+                : 'https://chipnet.imaginary.cash/api/blocks/tip/height'
+            const res = await fetch(url)
+            if (res.ok) {
+                if (IS_MAINNET) {
+                    const data = await res.json()
+                    if (data?.data?.blocks) setBlockHeight(data.data.blocks)
+                } else {
+                    const text = await res.text()
+                    if (text) setBlockHeight(parseInt(text.trim(), 10))
+                }
+            }
         } catch { }
-        setOracleOk(true) // Oracle is our own backend — mark healthy on load
+        try {
+            const oracleUrl = (import.meta.env.VITE_ORACLE_URL || 'http://localhost:3001') + '/health'
+            const oRes = await fetch(oracleUrl)
+            setOracleOk(oRes.ok)
+        } catch {
+            setOracleOk(false)
+        }
         setUpdatedAt(new Date())
     }, [])
 
@@ -276,14 +292,16 @@ function NetworkStatusBar() {
             display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap',
             backdropFilter: 'blur(20px)', marginBottom: '28px',
         }}>
-            {/* Chipnet Live */}
+            {/* Network Live */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <div style={{
                     width: '8px', height: '8px', borderRadius: '50%', background: GREEN,
                     boxShadow: `0 0 8px ${GREEN}`,
                     animation: 'pulse-net 2s ease-in-out infinite',
                 }} />
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: GREEN_L, letterSpacing: '0.06em' }}>CHIPNET LIVE</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: GREEN_L, letterSpacing: '0.06em' }}>
+                    {IS_MAINNET ? 'BCH MAINNET LIVE' : 'CHIPNET LIVE'}
+                </span>
             </div>
 
             <div style={{ width: '1px', height: '16px', background: BORDER }} />
@@ -426,7 +444,7 @@ export default function Dashboard({ project: initialProject, onFund, onVote, onT
     }
 
     const contract_address  = contractMeta?.contract_address
-        || project?.description?.match(/\[On-Chain Address: (bchtest:[^\]]+)\]/)?.[1]
+        || project?.description?.match(/\[On-Chain Address: ((?:bitcoincash|bchtest):[^\]]+)\]/)?.[1]
         || null
     const milestone_id_hex  = contractMeta?.milestone_id_hex
         || project?.description?.match(/\[Milestone ID: ([^\]]+)\]/)?.[1]
@@ -463,7 +481,7 @@ export default function Dashboard({ project: initialProject, onFund, onVote, onT
                         animation: 'pulse-net 2s ease-in-out infinite',
                     }} />
                     <span style={{ fontSize: '0.7rem', fontWeight: 700, color: GREEN_L, letterSpacing: '0.08em' }}>
-                        LIVE · BCH CHIPNET TESTNET
+                        LIVE · BCH {IS_MAINNET ? 'MAINNET' : 'CHIPNET TESTNET'}
                     </span>
                 </div>
 
@@ -558,7 +576,7 @@ export default function Dashboard({ project: initialProject, onFund, onVote, onT
                 <hr style={{ border: 'none', borderTop: `1px solid ${BORDER}`, margin: '20px 0' }} />
                 <ProgressBar current={fundedAmount} target={fundingTarget} />
                 <p style={{ fontSize: '0.68rem', color: MUTED, marginTop: '10px', textAlign: 'center', fontStyle: 'italic' }}>
-                    Live data from Supabase · On-chain via BCH Chipnet
+                    Live data from Supabase · On-chain via BCH {IS_MAINNET ? 'Mainnet' : 'Chipnet'}
                 </p>
             </div>
 

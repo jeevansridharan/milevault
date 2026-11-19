@@ -31,7 +31,10 @@
  */
 
 import { Contract, ElectrumNetworkProvider } from 'cashscript';
-const BCH_NETWORK = process.env.VITE_BCH_NETWORK === 'chipnet' ? 'chipnet' : 'mainnet';
+const netEnv = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_BCH_NETWORK) ||
+    (typeof process !== 'undefined' && (process.env?.VITE_BCH_NETWORK || process.env?.BCH_NETWORK)) ||
+    'mainnet';
+const BCH_NETWORK = netEnv === 'chipnet' ? 'chipnet' : 'mainnet';
 const EXPLORER_BASE_URL = BCH_NETWORK === 'chipnet' ? 'https://chipnet.imaginary.cash/address' : 'https://blockchair.com/bitcoin-cash/address';
 import { binToHex, hexToBin, secp256k1 }      from '@bitauth/libauth';
 import artifact                               from '../contracts/MilestoneEscrow.json' assert { type: 'json' };

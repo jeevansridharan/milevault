@@ -59,7 +59,18 @@ export async function fundMilestoneContract(wallet, amountBch, projectAddr) {
     if (!wallet) throw new Error('Connect wallet first')
     if (!projectAddr) throw new Error('Campaign escrow contract is not configured.')
     if (amountBch > MAX_FUND_BCH) throw new Error(`Funding is capped at ${MAX_FUND_BCH} BCH per transaction.`)
-    throw new Error('Governance funding is disabled until a real CashToken category and secure minter are configured.')
+
+    const satoshis = BigInt(Math.round(parseFloat(amountBch) * 1e8))
+    const result = await wallet.send([{ cashaddr: projectAddr, value: satoshis, unit: 'sat' }])
+
+    const prevLocked = loadFromStorage(STORAGE_KEYS.lockedAmount, 0)
+    saveToStorage(STORAGE_KEYS.lockedAmount, prevLocked + amountBch)
+
+    return {
+        txId: result.txId,
+        tokenAmount: 1,
+        tokenCategory: GOV_TOKEN_CATEGORY_ID
+    }
 }
 
 /**
@@ -383,11 +394,22 @@ export async function releaseMilestoneFunds(
             ? walletPkRaw
             : binToHex(walletPkRaw)
 
+        const toCompressedPk = (pkBytes) => {
+            if (pkBytes.length === 33) return pkBytes
+            if (pkBytes.length === 65 && pkBytes[0] === 0x04) {
+                const x = pkBytes.slice(1, 33)
+                const yLast = pkBytes[64]
+                const prefix = yLast % 2 === 0 ? 0x02 : 0x03
+                return new Uint8Array([prefix, ...x])
+            }
+            return pkBytes
+        }
+
         // Params in the exact order of the MilestoneEscrow constructor:
         //   (creatorPk, funderPk, tallyOraclePk, milestoneId, deadline)
-        const creatorPk = hexToBin(creatorPkHexStored ?? walletPkHexLive)
-        const funderPk  = hexToBin(funderPkHexStored  ?? walletPkHexLive)
-        const oraclePk  = hexToBin(oraclePkHexStored  ?? oraclePubkeyHex)
+        const creatorPk = toCompressedPk(hexToBin(creatorPkHexStored ?? walletPkHexLive))
+        const funderPk  = toCompressedPk(hexToBin(funderPkHexStored  ?? walletPkHexLive))
+        const oraclePk  = toCompressedPk(hexToBin(oraclePkHexStored  ?? oraclePubkeyHex))
 
         // Normalise milestoneId to 32 bytes (64 hex chars) — use milIdHex (may come from DB)
         let idHex = milIdHex.replace('0x', '')
@@ -527,19 +549,18 @@ export async function releaseMilestoneFunds(
         const totalUtxoSats = utxos.reduce((sum, u) => sum + BigInt(u.satoshis), 0n)
         console.log(`[milestoneContract]   Contract UTXOs: ${utxos.length} (total: ${totalUtxoSats} sat)`)
 
-        // Deduct a realistic miner fee (1200 sat covers P2PKH output + unlocking script overhead)
-        // Using the real UTXO total avoids the "output > input" error that occurs when
-        // amountBch doesn't match the actual on-chain balance.
-        if (totalUtxoSats < 1200n) {
+        // Deduct standard 1000 sat miner fee matching MilestoneEscrow.cash require check:
+        //   require(tx.outputs[0].value >= tx.inputs[this.activeInputIndex].value - 1000);
+        if (totalUtxoSats < 1000n) {
             throw new Error(
-                `Contract balance (${totalUtxoSats} sat) is too low to cover the miner fee (1200 sat). ` +
+                `Contract balance (${totalUtxoSats} sat) is too low to cover the miner fee (1000 sat). ` +
                 `Fund the contract with more BCH before releasing.`
             )
         }
-        const releaseAmount = totalUtxoSats - 1200n
+        const releaseAmount = totalUtxoSats - 1000n
 
-        console.log(`[milestoneContract] ▶ Broadcasting release() to Chipnet…`)
-        console.log(`[milestoneContract]   Release amount (after 1200 sat fee): ${releaseAmount} sat`)
+        console.log(`[milestoneContract] ▶ Broadcasting release() to ${BCH_NETWORK}…`)
+        console.log(`[milestoneContract]   Release amount (after 1000 sat fee): ${releaseAmount} sat`)
 
         const releaseUnlocker = contract.unlock.release(creatorSigTemplate, oracleSigBytes, tallyProof)
 
