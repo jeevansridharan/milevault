@@ -102,6 +102,14 @@ try {
 let startupPubkeyOk = false
 let mismatchedContracts = []
 
+// Address prefixes per network
+const MAINNET_PREFIX = 'bitcoincash:'
+const CHIPNET_PREFIX = 'bchtest:'
+const ACTIVE_NETWORK = process.env.BCH_NETWORK || 'mainnet'
+// For the startup check, we only care about rows that belong to the active network.
+// Legacy Chipnet (bchtest:) rows are ignored when BCH_NETWORK=mainnet and vice versa.
+const ACTIVE_PREFIX = ACTIVE_NETWORK === 'chipnet' ? CHIPNET_PREFIX : MAINNET_PREFIX
+
 async function checkOraclePubkeyConsistency() {
     try {
         const { data: rows, error } = await supabase
@@ -113,7 +121,18 @@ async function checkOraclePubkeyConsistency() {
             return
         }
 
-        const mismatches = (rows ?? []).filter(r => {
+        // Filter to only the rows that belong to the active network.
+        // Rows from other networks (e.g. bchtest: when running mainnet) are silently ignored.
+        const activeRows = (rows ?? []).filter(r =>
+            r.contract_address && r.contract_address.startsWith(ACTIVE_PREFIX)
+        )
+        const skippedRows = (rows ?? []).length - activeRows.length
+
+        if (skippedRows > 0) {
+            console.log(`[Oracle] ℹ Skipped ${skippedRows} legacy contract row(s) not matching network prefix "${ACTIVE_PREFIX}"`)
+        }
+
+        const mismatches = activeRows.filter(r => {
             if (!r.oracle_pubkey) return false   // no pubkey stored → skip
             return r.oracle_pubkey.toLowerCase() !== oraclePubkeyHex.toLowerCase()
         })
@@ -135,7 +154,7 @@ async function checkOraclePubkeyConsistency() {
         }
 
         startupPubkeyOk = true
-        console.log(`[Oracle] ✓ Startup pubkey check passed (${(rows ?? []).length} contract row(s) checked)`)
+        console.log(`[Oracle] ✓ Startup pubkey check passed (${activeRows.length} ${ACTIVE_NETWORK} row(s) checked, ${skippedRows} legacy row(s) ignored)`)
     } catch (err) {
         console.error('[Oracle] ✗ Startup pubkey check threw:', err.message)
         process.exit(1)
