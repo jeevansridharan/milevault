@@ -14,7 +14,7 @@
 
 import { BCH_NETWORK, MAX_FUND_BCH } from '../config/network'
 import { GOV_TOKEN_CATEGORY_ID } from './govService'
-import artifact from '../../production/contracts/MilestoneEscrow.json'
+import artifact from '../../production/contracts/MilestoneEscrow.json' with { type: 'json' }
 
 // ── Oracle Backend URL ────────────────────────────────────────────────────────
 // Reads from VITE_ORACLE_URL env var (set in .env for local, and in your

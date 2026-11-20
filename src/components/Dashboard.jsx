@@ -434,6 +434,71 @@ export default function Dashboard({ project: initialProject, onFund, onVote, onT
     ).length
     const progressPct    = fundingTarget > 0 ? Math.min((fundedAmount / fundingTarget) * 100, 100) : 0
 
+    const isCreator = Boolean(
+        connectedWallet && (
+            (project?.owner_wallet && project.owner_wallet === connectedWallet.cashaddr) ||
+            (contractMeta?.creator_pubkey && connectedWallet.publicKey)
+        )
+    )
+
+    const handleSyncWalletToEscrow = async () => {
+        if (!connectedWallet) return
+        setError(null)
+        try {
+            const { deployMilestoneEscrow } = await import('../../production/scripts/deployContract')
+            const { saveContractMetadata } = await import('../lib/db/contracts')
+            const { updateProject } = await import('../lib/db/projects')
+            const libauth = await import('@bitauth/libauth')
+
+            let walletPkHex = connectedWallet.publicKey
+            if (walletPkHex instanceof Uint8Array || (typeof walletPkHex === 'object' && walletPkHex !== null)) {
+                walletPkHex = Array.from(walletPkHex).map(b => b.toString(16).padStart(2, '0')).join('')
+            }
+            const clean = String(walletPkHex).replace(/^0x/, '')
+            let compressedPkHex = clean
+            if (clean.length === 130 && clean.startsWith('04')) {
+                const xHex = clean.slice(2, 66)
+                const yLastByte = parseInt(clean.slice(-2), 16)
+                compressedPkHex = (yLastByte % 2 === 0 ? '02' : '03') + xHex
+            }
+
+            const creatorPk = libauth.hexToBin(compressedPkHex)
+            const milestoneId = contractMeta?.milestone_id_hex
+                ? libauth.hexToBin(contractMeta.milestone_id_hex)
+                : (await libauth.instantiateSha256()).hash(libauth.utf8ToBin('MileVault-Mainnet-Milestone-Escrow-1'))
+
+            const deadline = contractMeta?.deadline ? Number(contractMeta.deadline) : 2000000
+
+            const deployment = await deployMilestoneEscrow({
+                creatorPk,
+                funderPk: creatorPk,
+                oraclePk: contractMeta?.oracle_pubkey || '03d515bff03324a5b4cd9b7eed788196a9cadd861c13023ffb841ed327e969835d',
+                milestoneId,
+                deadlineHeight: deadline,
+            })
+
+            await saveContractMetadata({
+                projectId: initialProject.id,
+                contractAddress: deployment.address,
+                creatorPubkey: compressedPkHex,
+                funderPubkey: compressedPkHex,
+                oraclePubkey: deployment.oraclePubkeyHex,
+                milestoneIdHex: deployment.milestoneIdHex,
+                deadline,
+            })
+
+            await updateProject(initialProject.id, {
+                owner_wallet: connectedWallet.cashaddr,
+            })
+
+            console.log('[Dashboard] ✓ Escrow synced to connected wallet:', deployment.address)
+            await fetchProjectData(false)
+        } catch (e) {
+            console.error('[Dashboard] Failed to sync wallet to escrow:', e)
+            setError(`Failed to sync escrow: ${e.message}`)
+        }
+    }
+
     const cleanDescription = (text) => {
         if (!text) return ''
         return text
@@ -499,11 +564,40 @@ export default function Dashboard({ project: initialProject, onFund, onVote, onT
                         </h1>
 
                         {contract_address && (
-                            <p style={{ color: MUTED, fontSize: '0.75rem', fontFamily: 'monospace', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
-                                <Shield size={12} color={PURPLE} />
-                                <span style={{ color: PURPLE }}>Contract:</span>
-                                <span>{contract_address}</span>
-                            </p>
+                            <div style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <p style={{ color: MUTED, fontSize: '0.75rem', fontFamily: 'monospace', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <Shield size={12} color={PURPLE} />
+                                    <span style={{ color: PURPLE }}>Contract:</span>
+                                    <span>{contract_address}</span>
+                                </p>
+                                {connectedWallet && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                                        <button
+                                            onClick={handleSyncWalletToEscrow}
+                                            style={{
+                                                background: 'rgba(16,185,129,0.12)',
+                                                border: '1px solid rgba(16,185,129,0.3)',
+                                                borderRadius: '8px',
+                                                padding: '3px 10px',
+                                                color: GREEN_L,
+                                                fontSize: '0.7rem',
+                                                fontWeight: 700,
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '4px',
+                                            }}
+                                            title="Reconstructs and binds the escrow contract to your connected wallet as creator so you can test releasing"
+                                        >
+                                            <Zap size={11} color={GREEN_L} />
+                                            Sync Escrow With My Wallet
+                                        </button>
+                                        <span style={{ fontSize: '0.68rem', color: MUTED }}>
+                                            (Click if you want your connected wallet to be the escrow creator)
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
                         )}
                     </div>
 
