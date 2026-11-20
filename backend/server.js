@@ -96,6 +96,55 @@ try {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 3b. Startup consistency check: oracle pubkey must match every contracts row
+// ─────────────────────────────────────────────────────────────────────────────
+
+let startupPubkeyOk = false
+let mismatchedContracts = []
+
+async function checkOraclePubkeyConsistency() {
+    try {
+        const { data: rows, error } = await supabase
+            .from('contracts')
+            .select('project_id, oracle_pubkey, contract_address')
+
+        if (error) {
+            console.error('[Oracle] ✗ Startup pubkey check: Supabase error:', error.message)
+            return
+        }
+
+        const mismatches = (rows ?? []).filter(r => {
+            if (!r.oracle_pubkey) return false   // no pubkey stored → skip
+            return r.oracle_pubkey.toLowerCase() !== oraclePubkeyHex.toLowerCase()
+        })
+
+        mismatchedContracts = mismatches.map(r => r.project_id)
+
+        if (mismatches.length > 0) {
+            console.error('[Oracle] ✗ STARTUP CHECK FAILED — oracle pubkey mismatch in contracts table!')
+            mismatches.forEach(r => {
+                console.error(`  project_id   : ${r.project_id}`)
+                console.error(`  contract     : ${r.contract_address}`)
+                console.error(`  stored pubkey: ${r.oracle_pubkey}`)
+                console.error(`  current key  : ${oraclePubkeyHex}`)
+            })
+            console.error('[Oracle]   Fix: update backend/.env ORACLE_WIF to the key the contracts were deployed with,')
+            console.error('[Oracle]        or redeploy the contracts with the current oracle key.')
+            console.error('[Oracle]   Refusing to start — an on-chain release would fail checkDataSig.')
+            process.exit(1)
+        }
+
+        startupPubkeyOk = true
+        console.log(`[Oracle] ✓ Startup pubkey check passed (${(rows ?? []).length} contract row(s) checked)`)
+    } catch (err) {
+        console.error('[Oracle] ✗ Startup pubkey check threw:', err.message)
+        process.exit(1)
+    }
+}
+
+await checkOraclePubkeyConsistency()
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 4. Express app setup
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -117,6 +166,8 @@ app.get('/health', (_req, res) => {
     res.json({
         status: 'ok',
         oracle: oraclePubkeyHex,
+        pubkey_ok: startupPubkeyOk,
+        mismatched_projects: mismatchedContracts,
         timestamp: new Date().toISOString(),
     })
 })
@@ -204,6 +255,52 @@ app.post('/api/oracle/sign', async (req, res) => {
         }
 
         console.log(`[Oracle] ✓ Found ${votes.length} vote(s) for milestone ${milestoneId}`)
+
+        // ── 5b2. Verify contract is funded on-chain via Electrum ─────────────
+        // Load contract address from Supabase (never trust client-submitted values).
+        // token_amount from client body is IGNORED — we read only from the DB.
+        const { data: contractRows, error: contractErr } = await supabase
+            .from('contracts')
+            .select('contract_address, deadline')
+            .eq('project_id', projectId)
+            .limit(1)
+
+        if (contractErr) {
+            console.error('[Oracle] ✗ Could not load contract from Supabase:', contractErr.message)
+            return res.status(500).json({ error: `Database error loading contract: ${contractErr.message}` })
+        }
+
+        if (!contractRows || contractRows.length === 0) {
+            console.error('[Oracle] ✗ No contract row found for projectId:', projectId)
+            return res.status(400).json({
+                approved: false,
+                reason: 'No contract record found for this project. Redeploy the contract first.',
+            })
+        }
+
+        const contractAddress = contractRows[0].contract_address
+        console.log('[Oracle] ▶ Checking Electrum UTXO for contract:', contractAddress)
+
+        try {
+            const { ElectrumNetworkProvider } = await import('cashscript')
+            const BCH_NETWORK = process.env.BCH_NETWORK || 'mainnet'
+            const provider = new ElectrumNetworkProvider(BCH_NETWORK)
+            const utxos = await provider.getUtxos(contractAddress)
+
+            if (!utxos || utxos.length === 0) {
+                console.error('[Oracle] ✗ Contract not funded on-chain:', contractAddress)
+                return res.status(400).json({
+                    approved: false,
+                    reason: `Contract not funded on-chain at ${contractAddress}. Fund it before requesting release.`,
+                })
+            }
+
+            const totalSats = utxos.reduce((s, u) => s + BigInt(u.satoshis), 0n)
+            console.log(`[Oracle] ✓ Contract UTXOs: ${utxos.length} (total: ${totalSats} sat)`)
+        } catch (electrumErr) {
+            console.error('[Oracle] ✗ Electrum check failed:', electrumErr.message)
+            return res.status(500).json({ error: `Electrum check failed: ${electrumErr.message}` })
+        }
 
         // ── 5c. Tally YES / NO votes (token-weighted) ────────────────────────
         let yesVotes = 0

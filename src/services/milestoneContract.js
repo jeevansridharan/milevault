@@ -277,81 +277,20 @@ export async function releaseMilestoneFunds(
             const { loadContractMetadata } = await import('../lib/db/contracts')
             const meta = await loadContractMetadata(projectId)
 
-            if (meta) {
+            if (meta && meta.contract_address && meta.milestone_id_hex) {
                 // Re-assign the rebindable let vars so STEP 3b uses the DB values
                 contractAddr  = meta.contract_address
                 milIdHex      = meta.milestone_id_hex
                 deadlineValue = Number(meta.deadline)
-
-                // Re-check — we now have everything we need
-                if (contractAddr && milIdHex) {
-                    console.log('[milestoneContract] ✓ Contract metadata loaded from DB:', contractAddr)
-                    // Fall through into STEP 3b below
-                } else {
-                    throw new Error('contracts row exists but is missing address or milestoneIdHex')
-                }
+                console.log('[milestoneContract] ✓ Contract metadata loaded from DB:', contractAddr)
+                // Fall through into STEP 3b below
             } else {
-                // No row in the contracts table — auto-reconstruct from available data
-                // and register it so future releases don't hit this path again.
-                console.warn('[milestoneContract] ⚠ No contract row — auto-registering from current wallet keys…')
-
-                const { Contract, ElectrumNetworkProvider } = await import('cashscript')
-                const { hexToBin, binToHex, utf8ToBin, instantiateSha256 } = await import('@bitauth/libauth')
-
-                if (!wallet.publicKey) throw new Error('Cannot auto-register: wallet public key missing.')
-
-                const walletPkHex = typeof wallet.publicKey === 'string'
-                    ? wallet.publicKey
-                    : binToHex(wallet.publicKey)
-
-                // Oracle pubkey comes from the oracle response we just received
-                const oraclePkHex = oraclePubkeyHex
-
-                // Derive a deterministic milestoneId from projectId + milestoneId UUID
-                const sha256 = await instantiateSha256()
-                const derivedMilId = sha256.hash(utf8ToBin(projectId + milestoneId))
-                const derivedMilIdHex = binToHex(derivedMilId)
-                const FALLBACK_DEADLINE = 2000000  // far-future block height
-
-                // Reconstruct the contract address deterministically
-                const provider = new ElectrumNetworkProvider(BCH_NETWORK)
-                const reconstructed = new Contract(
-                    artifact,
-                    [
-                        hexToBin(walletPkHex),   // creatorPk
-                        hexToBin(walletPkHex),   // funderPk (creator == funder)
-                        hexToBin(oraclePkHex),   // tallyOraclePk
-                        derivedMilId,            // milestoneId (32 bytes)
-                        BigInt(FALLBACK_DEADLINE),
-                    ],
-                    { provider },
+                throw new Error(
+                    'No contract record found for this project. ' +
+                    'The escrow contract must be deployed before funds can be released. ' +
+                    'Please create a new project or contact the project admin.'
                 )
-
-                // Persist to Supabase so the next release skips this path
-                try {
-                    const { saveContractMetadata } = await import('../lib/db/contracts')
-                    await saveContractMetadata({
-                        projectId,
-                        contractAddress:  reconstructed.address,
-                        creatorPubkey:    walletPkHex,
-                        funderPubkey:     walletPkHex,
-                        oraclePubkey:     oraclePkHex,
-                        milestoneIdHex:   derivedMilIdHex,
-                        deadline:         FALLBACK_DEADLINE,
-                    })
-                    console.log('[milestoneContract] Auto-registered contract metadata for project:', projectId)
-                } catch (saveErr) {
-                    // Non-fatal — we still have the in-memory values to continue
-                    console.warn('[milestoneContract] ⚠ Auto-register save failed (continuing):', saveErr.message)
-                }
-
-                // Assign rebindable vars so STEP 3b uses these values
-                contractAddr  = reconstructed.address
-                milIdHex      = derivedMilIdHex
-                deadlineValue = FALLBACK_DEADLINE
-                console.log('[milestoneContract] ✓ Auto-registered contract address:', contractAddr)
             }
-
         } catch (metaErr) {
             console.error('[milestoneContract] ✗ Failed to load contract metadata:', metaErr.message)
             throw new Error(`Cannot release: ${metaErr.message}`)

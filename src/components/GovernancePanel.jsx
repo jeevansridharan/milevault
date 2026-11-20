@@ -168,9 +168,8 @@ export default function GovernancePanel({
         setError('')
         setReleaseId(milestoneDbId)
         try {
-            // The Oracle only needs milestoneId (Supabase UUID) + projectId.
-            // The CashScript release() call needs contractAddress + milestoneIdHex,
-            // but we fall back gracefully if those aren't available yet.
+            // releaseMilestoneFunds() always either returns a real txid string
+            // or throws — there is no silent DB-only path.
             const txId = await releaseMilestoneFunds(
                 wallet,
                 amountBch,
@@ -180,13 +179,12 @@ export default function GovernancePanel({
                 milestoneDbId,
                 projectId,
             )
-            // releaseMilestoneFunds() returns:
-            //   string  — real tx.txid from a successful CashScript broadcast
-            //   null    — DB-only release (legacy project with no on-chain contract data)
-            const realTxId = txId || null
-            setReleaseTxId(prev => ({ ...prev, [milestoneDbId]: realTxId }))
-            if (onTransaction && realTxId) {
-                onTransaction(amountBch, realTxId, 'release')
+            if (!txId) {
+                throw new Error('Release returned no transaction ID — broadcast may have failed. Check the oracle backend logs.')
+            }
+            setReleaseTxId(prev => ({ ...prev, [milestoneDbId]: txId }))
+            if (onTransaction) {
+                onTransaction(amountBch, txId, 'release')
             }
             refreshState()
         } catch (e) {
@@ -372,7 +370,7 @@ export default function GovernancePanel({
                                         </>
                                     )}
 
-                                    {txId && txId !== 'oracle-approved' && (
+                                    {txId && (
                                         <div className="mt-2 text-center">
                                             <a
                                                 href={chipnetExplorerUrl(txId)}
