@@ -97,7 +97,7 @@ export default function Sidebar() {
                             letterSpacing: '0.08em',
                             marginTop: '1px',
                         }}>
-                            BCH · CHIPNET
+                            BCH · MAINNET
                         </div>
                     </div>
                 )}
@@ -239,8 +239,8 @@ export default function Sidebar() {
                         flexShrink: 0,
                     }} />
                     <div>
-                        <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#10b981' }}>Chipnet Live</div>
-                        <div style={{ fontSize: '0.65rem', color: '#475569' }}>BCH Testnet</div>
+                        <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#10b981' }}>BCH · MAINNET</div>
+                        <div style={{ fontSize: '0.65rem', color: '#f59e0b' }}>⚠ Real BCH · Small amounts only</div>
                     </div>
                 </div>
             )}

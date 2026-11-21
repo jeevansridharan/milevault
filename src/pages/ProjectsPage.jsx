@@ -50,6 +50,10 @@ import { generateVotingAddresses } from '../../production/scripts/generateVoting
 import { useWallet } from '../contexts/WalletContext'
 import * as libauth from '@bitauth/libauth'
 
+// ── MAINNET: Only show this single canonical project ──────────────────────────
+// All other projects are hidden from the UI to prevent confusion on live BCH.
+const MAINNET_PROJECT_TITLE = 'MileVault Mainnet Escrow'
+
 // ── TODO: Replace with the currently connected wallet address ─────────────────
 // If you have a wallet context/hook, import it here and pass the address down.
 // For now we use a placeholder so the owner_wallet field is never empty.
@@ -138,7 +142,12 @@ export default function ProjectsPage() {
             setError(sbError.message)
             setProjects([])
         } else {
-            setProjects(data ?? [])    // `data` is null if table is empty
+            // On mainnet: only show the single canonical escrow project
+            const all = data ?? []
+            const mainnetOnly = all.filter(p =>
+                p.title && p.title.trim().toLowerCase() === MAINNET_PROJECT_TITLE.toLowerCase()
+            )
+            setProjects(mainnetOnly.length > 0 ? mainnetOnly : all.slice(0, 1))
         }
 
         setLoading(false)  // hide spinner
@@ -519,7 +528,7 @@ export default function ProjectsPage() {
                         Projects
                     </h1>
                     <p style={{ color: '#64748b', fontSize: '0.875rem' }}>
-                        {loading ? 'Loading…' : `${projects.length} project${projects.length !== 1 ? 's' : ''} on Chipnet`}
+                        {loading ? 'Loading…' : `${projects.length} project${projects.length !== 1 ? 's' : ''} on BCH Mainnet`}
                     </p>
                 </div>
 
@@ -623,7 +632,7 @@ export default function ProjectsPage() {
                         No projects yet
                     </p>
                     <p style={{ color: '#475569', fontSize: '0.875rem', marginBottom: '24px' }}>
-                        Be the first to create a milestone-based funding project on Chipnet.
+                        Be the first to create a milestone-based funding project on BCH Mainnet.
                     </p>
                     <button
                         onClick={() => setShowForm(true)}

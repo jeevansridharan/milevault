@@ -111,7 +111,7 @@ export default function TransactionsPage() {
                     Transactions
                 </h1>
                 <p style={{ color: '#64748b', fontSize: '0.9rem' }}>
-                    All on-chain BCH activity recorded on Chipnet
+                    All on-chain BCH activity recorded on BCH Mainnet
                 </p>
             </div>
 

@@ -147,7 +147,7 @@ function Flow() {
         {
             num: '01', icon: '📋', color: GREEN,
             title: 'Create Project',
-            desc: 'The project creator defines milestones, sets a funding target, and deploys a CashScript escrow contract on Chipnet. BCH locked in the contract is verifiably held on-chain.',
+            desc: 'The project creator defines milestones, sets a funding target, and deploys a CashScript escrow contract on BCH Mainnet. BCH locked in the contract is verifiably held on-chain.',
             detail: 'Contract deployed → funds locked → milestones recorded',
         },
         {
@@ -266,7 +266,7 @@ function SmartContract() {
                     <div style={{ fontSize: '1.4rem', marginBottom: '12px' }}>📦</div>
                     <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: TEXT, marginBottom: '8px' }}>Escrow Contract</h3>
                     <p style={{ color: '#94a3b8', fontSize: '0.82rem', lineHeight: 1.65 }}>
-                        When a project is created, a CashScript contract is compiled and deployed to Chipnet.
+                        When a project is created, a CashScript contract is compiled and deployed to BCH Mainnet.
                         The contract P2SH address is unique per project. All BCH contributions are sent directly to this address — not to any wallet.
                     </p>
                 </Card>
@@ -325,7 +325,7 @@ function Governance() {
         {
             icon: '📊', color: CYAN,
             title: 'Quorum & Threshold',
-            body: 'A milestone vote requires >50% YES votes from participating token holders. There is no minimum quorum currently on Chipnet — any token holder can trigger a vote, but all holders can participate within the 72-hour window.',
+            body: 'A milestone vote requires >50% YES votes from participating token holders. There is no minimum quorum — any token holder can trigger a vote, and all holders can participate within the 72-hour window.',
         },
         {
             icon: '🛡️', color: PURPLE,
@@ -397,7 +397,7 @@ function FAQ() {
     const items = [
         {
             q: 'Is this on mainnet?',
-            a: 'Currently MileVault runs on the BCH Chipnet testnet only. Chipnet is a dedicated Bitcoin Cash test network with real CashScript contracts but no real-money BCH. Mainnet deployment is coming soon after audits complete.',
+            a: 'Yes. MileVault runs on BCH Mainnet — the live Bitcoin Cash blockchain with real BCH. Use only small amounts (capped at 0.002 BCH per transaction). Contracts are immutable once deployed.',
         },
         {
             q: 'What is the oracle?',
@@ -409,11 +409,11 @@ function FAQ() {
         },
         {
             q: 'What wallet do I need?',
-            a: 'Any BCH wallet that supports Chipnet testnet works, including Electron Cash configured for Chipnet, or a custom WIF-key wallet. The app provides a built-in Chipnet wallet connector under the Profile section.',
+            a: 'Any BCH wallet that supports mainnet works, including Electron Cash, Paytaca, or Zapit. The app provides a built-in BCH Mainnet wallet connector under the Profile section.',
         },
         {
             q: 'How are GOV tokens created?',
-            a: 'GOV tokens are minted automatically when a contribution is recorded in the Supabase backend. On Chipnet, this is simulated. On mainnet, tokens will be issued as BCH CashTokens — the native fungible token standard on Bitcoin Cash.',
+            a: 'GOV tokens are minted automatically when a contribution is recorded in the Supabase backend. On mainnet, tokens are issued as BCH CashTokens — the native fungible token standard on Bitcoin Cash.',
         },
         {
             q: 'What happens if a milestone vote fails?',
@@ -586,7 +586,7 @@ export default function DocsPage() {
                             borderRadius: '999px', padding: '4px 12px',
                         }}>
                             <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: GREEN, boxShadow: `0 0 6px ${GREEN}` }} />
-                            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: GREEN_LIGHT, letterSpacing: '0.06em' }}>CHIPNET LIVE</span>
+                            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: GREEN_LIGHT, letterSpacing: '0.06em' }}>BCH MAINNET LIVE</span>
                         </div>
                         <a href="/projects" style={{
                             padding: '8px 18px', borderRadius: '9px', textDecoration: 'none',
@@ -622,7 +622,7 @@ export default function DocsPage() {
                         Works
                     </h1>
                     <p style={{ color: '#94a3b8', fontSize: '1.05rem', lineHeight: 1.65 }}>
-                        A trustless milestone-based funding protocol on Bitcoin Cash Chipnet.
+                        A trustless milestone-based funding protocol on Bitcoin Cash Mainnet.
                         Learn how funds flow from escrow to release — and who controls each step.
                     </p>
                 </div>
