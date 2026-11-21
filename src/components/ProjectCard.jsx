@@ -45,7 +45,11 @@ function formatDate(isoString) {
  */
 function cleanDescription(text) {
     if (!text) return ''
-    return text.replace(/\[On-Chain Address: bchtest:[^\]]+\]/g, '').trim()
+    return text
+        .replace(/\[On-Chain Address: (?:bitcoincash|bchtest):[^\]]+\]/g, '')
+        .replace(/\[Milestone ID: [^\]]+\]/g, '')
+        .replace(/\[Deadline: [^\]]+\]/g, '')
+        .trim()
 }
 
 /**
@@ -85,7 +89,7 @@ export default function ProjectCard({ project, onView, onDelete }) {
     // Fallback: If contract_address is null, try to extract it from the description
     let displayAddress = contract_address
     if (!displayAddress && description && description.includes('[On-Chain Address: ')) {
-        const match = description.match(/\[On-Chain Address: (bchtest:[^\]]+)\]/)
+        const match = description.match(/\[On-Chain Address: ((?:bitcoincash|bchtest):[^\]]+)\]/)
         if (match) displayAddress = match[1]
     }
 

@@ -518,6 +518,18 @@ export default function ProjectsPage() {
     return (
         <div>
 
+            {/* ── Mainnet warning ─────────────────────────────────────────────── */}
+            <div style={{
+                marginBottom: '20px', padding: '12px 18px', borderRadius: '12px',
+                background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)',
+                display: 'flex', alignItems: 'center', gap: '10px',
+            }}>
+                <span style={{ fontSize: '1rem' }}>⚠️</span>
+                <span style={{ color: '#fbbf24', fontSize: '0.82rem', fontWeight: 600 }}>
+                    BCH Mainnet — real funds. Max 0.002 BCH per transaction. Verify the escrow contract address before sending.
+                </span>
+            </div>
+
             {/* ── Page header ────────────────────────────────────────────────── */}
             <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -677,7 +689,7 @@ export default function ProjectsPage() {
                                 key={project.id}
                                 project={project}
                                 onView={(p) => setActiveProject(p)}
-                                onDelete={handleProjectDelete}
+                                onDelete={null}
                             />
                         ))}
                     </div>

@@ -632,7 +632,6 @@ export default function Dashboard({ project: initialProject, onFund, onVote, onT
                     label="Funding Target"
                     value={`${fundingTarget.toFixed(2)}`}
                     sub="BCH"
-                    change="+0%"
                     Icon={Bitcoin}
                     color={GREEN}
                     loading={loading}
