@@ -426,7 +426,8 @@ export default function Dashboard({ project: initialProject, onFund, onVote, onT
     // ── Derived Values ────────────────────────────────────────────────────────
     const title          = project?.title ?? 'Untitled Project'
     const description    = project?.description ?? ''
-    const fundingTarget  = parseFloat(project?.goal_amount ?? project?.fundingTarget ?? 0)
+    const rawTarget      = parseFloat(project?.goal_amount ?? project?.fundingTarget ?? 0)
+    const fundingTarget  = rawTarget > 0 ? rawTarget : 0.002
     const fundedAmount   = parseFloat(project?.raised_amount ?? project?.fundedAmount ?? 0)
     const milestones     = Array.isArray(project?.milestones) ? project.milestones : []
     const approvedCount  = milestones.filter(
@@ -436,8 +437,11 @@ export default function Dashboard({ project: initialProject, onFund, onVote, onT
 
     const isCreator = Boolean(
         connectedWallet && (
-            (project?.owner_wallet && project.owner_wallet === connectedWallet.cashaddr) ||
-            (contractMeta?.creator_pubkey && connectedWallet.publicKey)
+            (project?.owner_wallet && project.owner_wallet.toLowerCase() === connectedWallet.cashaddr?.toLowerCase()) ||
+            (contractMeta?.creator_pubkey && connectedWallet.publicKey && (
+                typeof connectedWallet.publicKey === 'string' &&
+                connectedWallet.publicKey.toLowerCase().includes(contractMeta.creator_pubkey.toLowerCase())
+            ))
         )
     )
 
@@ -570,7 +574,7 @@ export default function Dashboard({ project: initialProject, onFund, onVote, onT
                                     <span style={{ color: PURPLE }}>Contract:</span>
                                     <span>{contract_address}</span>
                                 </p>
-                                {connectedWallet && (
+                                {isCreator && (
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
                                         <button
                                             onClick={handleSyncWalletToEscrow}
@@ -626,11 +630,30 @@ export default function Dashboard({ project: initialProject, onFund, onVote, onT
                 </div>
             )}
 
+            {/* ── How to try this ────────────────────────────────────────────── */}
+            <div style={{
+                background: 'rgba(16,185,129,0.05)',
+                border: '1px solid rgba(16,185,129,0.2)',
+                borderRadius: '14px',
+                padding: '16px 20px',
+                marginBottom: '24px',
+            }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 800, color: GREEN_L, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>
+                    How to try this
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.82rem', color: '#cbd5e1' }}>
+                    <div>1) Connect wallet</div>
+                    <div>2) Fund 0.001 BCH</div>
+                    <div>3) Vote</div>
+                    <div>4) Release</div>
+                </div>
+            </div>
+
             {/* ── Stats Row ──────────────────────────────────────────────────── */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px', marginBottom: '24px' }}>
                 <StatCard
                     label="Funding Target"
-                    value={`${fundingTarget.toFixed(2)}`}
+                    value={fundingTarget > 0 && fundingTarget < 0.01 ? `${fundingTarget.toFixed(3)}` : `${fundingTarget.toFixed(2)}`}
                     sub="BCH"
                     Icon={Bitcoin}
                     color={GREEN}
@@ -640,7 +663,6 @@ export default function Dashboard({ project: initialProject, onFund, onVote, onT
                     label="Amount Raised"
                     value={`${fundedAmount.toFixed(4)}`}
                     sub="BCH"
-                    change={fundedAmount > 0 ? `+${progressPct.toFixed(0)}%` : '+0%'}
                     Icon={TrendingUp}
                     color={GREEN_L}
                     loading={loading}
@@ -649,7 +671,6 @@ export default function Dashboard({ project: initialProject, onFund, onVote, onT
                     label="Milestones"
                     value={`${approvedCount}/${milestones.length}`}
                     sub="Approved"
-                    change={milestones.length > 0 ? `+${Math.round((approvedCount / milestones.length) * 100)}%` : '+0%'}
                     Icon={CheckCircle2}
                     color={PURPLE}
                     loading={loading}
