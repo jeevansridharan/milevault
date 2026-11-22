@@ -18,11 +18,13 @@ import ProfilePage from './pages/ProfilePage'
 import DocsPage from './pages/DocsPage'
 
 import { WalletProvider } from './contexts/WalletContext'
+import { WizardProvider } from './contexts/WizardContext'
 
 export default function App() {
   return (
     <BrowserRouter>
       <WalletProvider>
+      <WizardProvider>
         <Routes>
           {/* Landing page — standalone, no sidebar */}
           <Route path="/" element={<LandingPage />} />
@@ -40,6 +42,7 @@ export default function App() {
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>
         </Routes>
+      </WizardProvider>
       </WalletProvider>
     </BrowserRouter>
   )
