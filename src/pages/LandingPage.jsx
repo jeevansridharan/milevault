@@ -95,7 +95,7 @@ function Navbar() {
                             background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)',
                             borderRadius: '999px', padding: '1px 7px', letterSpacing: '0.08em',
                             marginTop: '3px', display: 'inline-block',
-                        }}>BCH CHIPNET</div>
+                        }}>BCH · MAINNET</div>
                     </div>
                 </div>
 
@@ -228,7 +228,7 @@ function Hero() {
                         animation: 'pulse-dot 2s ease-in-out infinite',
                     }} />
                     <span style={{ fontSize: '0.75rem', fontWeight: 700, color: GREEN_BRIGHT, letterSpacing: '0.08em' }}>
-                        LIVE ON CHIPNET TESTNET
+                        LIVE ON BCH MAINNET
                     </span>
                 </div>
 
@@ -388,7 +388,7 @@ function HowItWorks() {
         {
             num: '01',
             title: 'Create Project',
-            desc: 'Define milestones, set funding targets, and lock BCH in a CashScript escrow contract on the Chipnet testnet.',
+            desc: 'Define milestones, set funding targets, and lock BCH in a CashScript escrow contract on Bitcoin Cash Mainnet.',
             icon: '📋',
             color: GREEN,
         },
@@ -507,8 +507,8 @@ function Features() {
         },
         {
             icon: '🧪',
-            title: 'Chipnet Testnet Live',
-            desc: 'Battle-test your funding proposals risk-free on the BCH Chipnet before mainnet deployment. Real contracts, real feedback.',
+            title: 'BCH Mainnet Live',
+            desc: 'Deploy and fund milestone proposals directly on Bitcoin Cash Mainnet. Real contracts, real feedback.',
             color: GREEN_BRIGHT,
         },
     ]
@@ -589,7 +589,7 @@ function CTABanner() {
                             Ready to fund your vision?
                         </h2>
                         <p style={{ color: '#94a3b8', fontSize: '1rem', lineHeight: 1.6, marginBottom: '36px', maxWidth: '440px', margin: '0 auto 36px' }}>
-                            Launch a milestone-based project on Chipnet today — no trust required, just code.
+                            Launch a milestone-based project on BCH Mainnet today — no trust required, just code.
                         </p>
                         <button
                             onClick={() => navigate('/projects')}

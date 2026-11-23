@@ -133,7 +133,7 @@ export default function DashboardPage() {
                     background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)',
                 }}>
                     <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10b981', boxShadow: '0 0 6px rgba(16,185,129,0.8)' }} />
-                    <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#34d399', letterSpacing: '0.06em' }}>LIVE · CHIPNET TESTNET</span>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#34d399', letterSpacing: '0.06em' }}>LIVE · BCH MAINNET</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
                     <div>
@@ -141,7 +141,7 @@ export default function DashboardPage() {
                             Welcome to MileVault
                         </h1>
                         <p style={{ color: '#64748b', fontSize: '0.95rem' }}>
-                            Milestone-based funding platform on Bitcoin Cash Chipnet
+                            Milestone-based funding platform on Bitcoin Cash Mainnet
                         </p>
                     </div>
                     {/* Refresh button */}
@@ -223,10 +223,10 @@ export default function DashboardPage() {
                         </div>
                         <div>
                             <p style={{ color: '#e2e8f0', fontWeight: 700, fontSize: '0.9rem' }}>Fast Funding</p>
-                            <p style={{ color: '#64748b', fontSize: '0.75rem' }}>Send BCH Chipnet to active projects</p>
+                            <p style={{ color: '#64748b', fontSize: '0.75rem' }}>Send BCH Mainnet to active projects</p>
                         </div>
                     </button>
-                    <QuickAction to="/projects" Icon={FolderKanban} title="Create or Browse Projects" description="Fund a milestone-based project on Chipnet" color="#10b981" />
+                    <QuickAction to="/projects" Icon={FolderKanban} title="Create or Browse Projects" description="Fund a milestone-based project on BCH Mainnet" color="#10b981" />
                     <QuickAction to="/governance" Icon={Vote} title="Governance Voting" description="Use GOV tokens to vote on milestones" color="#34d399" />
                     <QuickAction to="/transactions" Icon={ArrowUpRight} title="Transaction History" description="View all on-chain BCH transactions" color="#06b6d4" />
                 </div>
