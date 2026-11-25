@@ -8,6 +8,7 @@
 import React, { useState, useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar'
+import BlazeInfoBanner from '../components/BlazeInfoBanner'
 
 const SIDEBAR_EXPANDED = 240
 const SIDEBAR_COLLAPSED = 72
@@ -37,7 +38,8 @@ export default function Layout() {
                     background: 'radial-gradient(ellipse at 20% 10%, rgba(124,58,237,0.07) 0%, transparent 60%), radial-gradient(ellipse at 80% 80%, rgba(6,182,212,0.05) 0%, transparent 60%), #0a0b14',
                 }}
             >
-                {/* Decorative ambient orbs */}
+                {/* EMBER2026 / BLAZE info banner */}
+                <BlazeInfoBanner />
                 <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0, overflow: 'hidden' }}>
                     <div style={{ position: 'absolute', top: '10%', left: '40%', width: '400px', height: '400px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(124,58,237,0.06), transparent)', filter: 'blur(80px)' }} />
                     <div style={{ position: 'absolute', bottom: '20%', right: '10%', width: '350px', height: '350px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(6,182,212,0.05), transparent)', filter: 'blur(80px)' }} />
