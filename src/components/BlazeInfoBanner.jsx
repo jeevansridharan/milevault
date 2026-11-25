@@ -44,8 +44,6 @@ export default function BlazeInfoBanner() {
                 <BannerLink href={PRESENTATION_URL} label="🎞 Presentation" />
                 <Sep />
                 <BannerLink href="https://github.com/jeevansridharan/milevault" label="⬡ Repo" />
-                <Sep />
-                <BannerLink href="https://github.com/jeevansridharan/bch1" label="📦 Old repo (Milestara)" />
             </div>
 
             {/* Donation address */}
