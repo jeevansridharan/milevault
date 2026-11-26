@@ -20,7 +20,8 @@
  */
 
 import * as libauth from '@bitauth/libauth';
-const CASHADDR_PREFIX = process.env.VITE_BCH_NETWORK === 'chipnet' ? 'bchtest' : 'bitcoincash';
+const network = (typeof process !== 'undefined' && (process.env?.VITE_BCH_NETWORK || process.env?.BCH_NETWORK)) || 'mainnet';
+const CASHADDR_PREFIX = network === 'chipnet' ? 'bchtest' : 'bitcoincash';
 
 // Domain salt — keeps project vote keys separate from any wallet keys
 const APPROVE_SALT = 'milevault:vote:approve:v1';

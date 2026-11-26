@@ -362,7 +362,7 @@ export default function Dashboard({ project: initialProject, onFund, onVote, onT
     const [error, setError] = useState(null)
     const [contractMeta, setContractMeta] = useState(null)
     const { wallet: connectedWallet } = useWallet()
-    const [onChainTally, setOnChainTally] = useState({ yesVotes: 0, noVotes: 0, approvalPercentage: 0 })
+    const [onChainTally, setOnChainTally] = useState({ yesVotes: 0, noVotes: 0, totalVotes: 0, approvalPercentage: 0, txids: [], yesTxids: [], noTxids: [] })
 
     // ── Fetch Logic ───────────────────────────────────────────────────────────
     const fetchProjectData = useCallback(async (isSilent = false) => {
@@ -383,9 +383,31 @@ export default function Dashboard({ project: initialProject, onFund, onVote, onT
                 console.warn('[Dashboard] Contract metadata not available:', metaErr.message)
             }
 
-            const tally = await scanVotes(initialProject.id)
-            setOnChainTally(tally)
-            console.log(`[Dashboard] ✓ On-Chain Tally: ${tally.yesVotes} YES / ${tally.noVotes} NO`)
+            try {
+                const oracleUrl = import.meta.env.VITE_ORACLE_URL || 'http://localhost:3001'
+                const tallyRes = await fetch(`${oracleUrl}/api/oracle/tally?projectId=${initialProject.id}`)
+                if (tallyRes.ok) {
+                    const data = await tallyRes.json()
+                    setOnChainTally({
+                        yesVotes: data.yes || 0,
+                        noVotes: data.no || 0,
+                        totalVotes: (data.yes || 0) + (data.no || 0),
+                        approvalPercentage: (data.yes + data.no > 0) ? ((data.yes / (data.yes + data.no)) * 100) : 0,
+                        txids: data.txids || [],
+                        yesTxids: data.yesTxids || [],
+                        noTxids: data.noTxids || [],
+                        approveAddr: data.approveAddr,
+                        rejectAddr: data.rejectAddr,
+                    })
+                    console.log(`[Dashboard] ✓ On-Chain Tally (Oracle /tally): ${data.yes} YES / ${data.no} NO (${(data.txids || []).length} txids)`)
+                } else {
+                    const tally = await scanVotes(initialProject.id)
+                    setOnChainTally(prev => ({ ...prev, ...tally }))
+                }
+            } catch {
+                const tally = await scanVotes(initialProject.id)
+                setOnChainTally(prev => ({ ...prev, ...tally }))
+            }
         } catch (err) {
             console.error('[Dashboard] Sync error:', err.message)
             setError(err.message)
@@ -738,6 +760,74 @@ export default function Dashboard({ project: initialProject, onFund, onVote, onT
                     }}>
                         {approvedCount}/{milestones.length} done
                     </div>
+                </div>
+
+                {/* ── On-Chain Governance Tally (Electrum & Oracle) ─────────── */}
+                <div style={{
+                    background: 'rgba(16,185,129,0.04)',
+                    border: '1px solid rgba(16,185,129,0.2)',
+                    borderRadius: '14px',
+                    padding: '16px 20px',
+                    marginBottom: '20px',
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
+                        <div>
+                            <span style={{ fontSize: '0.68rem', fontWeight: 800, color: GREEN_L, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                                On-Chain Governance Tally
+                            </span>
+                            <p style={{ color: MUTED, fontSize: '0.75rem', marginTop: '2px' }}>
+                                Authoritative CashToken balances verified via Electrum on BCH {IS_MAINNET ? 'Mainnet' : 'Chipnet'}
+                            </p>
+                        </div>
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                            <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#34d399' }}>
+                                ✓ YES: {onChainTally.yesVotes || 0} GOV
+                            </span>
+                            <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#f87171' }}>
+                                ✗ NO: {onChainTally.noVotes || 0} GOV
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Explorer links */}
+                    {onChainTally.txids && onChainTally.txids.length > 0 ? (
+                        <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                            <p style={{ fontSize: '0.72rem', color: '#94a3b8', marginBottom: '6px', fontWeight: 600 }}>
+                                Verified On-Chain Vote Transactions ({onChainTally.txids.length}):
+                            </p>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                {onChainTally.txids.map(txid => (
+                                    <a
+                                        key={txid}
+                                        href={IS_MAINNET ? `https://blockchair.com/bitcoin-cash/transaction/${txid}` : `https://chipnet.imaginary.cash/tx/${txid}`}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        style={{
+                                            fontSize: '0.72rem',
+                                            fontFamily: 'monospace',
+                                            color: GREEN_L,
+                                            background: 'rgba(16,185,129,0.1)',
+                                            border: '1px solid rgba(16,185,129,0.25)',
+                                            borderRadius: '6px',
+                                            padding: '3px 8px',
+                                            textDecoration: 'none',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '4px',
+                                        }}
+                                    >
+                                        <span>🔍</span>
+                                        <span>{txid.slice(0, 8)}…{txid.slice(-6)}</span>
+                                        <span>↗</span>
+                                    </a>
+                                ))}
+                            </div>
+                        </div>
+                    ) : (
+                        <p style={{ fontSize: '0.72rem', color: MUTED, fontStyle: 'italic', marginTop: '6px' }}>
+                            No on-chain vote transactions detected yet at derived voting addresses.
+                        </p>
+                    )}
                 </div>
 
                 {/* Milestone progress strip */}

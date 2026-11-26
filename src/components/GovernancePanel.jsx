@@ -77,6 +77,7 @@ export default function GovernancePanel({
     const [releaseTxId, setReleaseTxId] = useState({})
     const [error, setError] = useState('')
     const [milestoneVotes, setMilestoneVotes] = useState({})
+    const [oracleTally, setOracleTally] = useState({ yes: 0, no: 0, txids: [], yesTxids: [], noTxids: [] })
 
     // ── Load state ────────────────────────────────────────────────────────────
     const refreshState = useCallback(async () => {
@@ -90,6 +91,19 @@ export default function GovernancePanel({
         // 3. Scan On-Chain Votes — scoped to this project's addresses
         const tally = await scanVotes(projectId)
         console.log('[GovernancePanel] On-Chain Tally fetched:', tally)
+
+        // 4. Fetch Authoritative On-Chain Tally from Oracle /tally endpoint
+        try {
+            const oracleUrl = import.meta.env.VITE_ORACLE_URL || 'http://localhost:3001'
+            const res = await fetch(`${oracleUrl}/api/oracle/tally?projectId=${projectId}`)
+            if (res.ok) {
+                const data = await res.json()
+                setOracleTally(data)
+                console.log(`[GovernancePanel] ✓ Oracle on-chain tally: YES=${data.yes} NO=${data.no} (${(data.txids || []).length} txids)`)
+            }
+        } catch (tallyErr) {
+            console.warn('[GovernancePanel] Could not fetch /api/oracle/tally:', tallyErr.message)
+        }
     }, [milestones, wallet?.cashaddr, projectId])
 
     useEffect(() => { refreshState() }, [refreshState, milestones])
@@ -99,7 +113,7 @@ export default function GovernancePanel({
             <div className="card-glass rounded-2xl p-6 mb-6">
                 <WeekBadge />
                 <p className="text-slate-400 text-sm mt-4 text-center">
-                    🔒 Connect your Chipnet wallet above to unlock governance features.
+                    🔒 Connect your BCH Mainnet wallet above to unlock governance features.
                 </p>
             </div>
         )
@@ -291,11 +305,14 @@ export default function GovernancePanel({
 
                     <div className="space-y-4">
                         {milestones.map((m, idx) => {
-                            // Prefer DB votes which the Oracle relies on.
-                            const votes = { yes: m.voteYes ?? m.votes?.yes ?? 0, no: m.voteNo ?? m.votes?.no ?? 0 }
+                            // On-chain tally takes precedence if present, otherwise Supabase DB votes
+                            const votes = {
+                                yes: oracleTally.yes > 0 ? oracleTally.yes : (m.voteYes ?? m.votes?.yes ?? 0),
+                                no: oracleTally.no > 0 ? oracleTally.no : (m.voteNo ?? m.votes?.no ?? 0),
+                            }
                             const total = votes.yes + votes.no
-                            // Check DB approval flag OR status string OR vote tally
-                            const approved = m.approved === true || m.status === 'approved' || m.status === 'released' || (total >= 1 && votes.yes / total > 0.5)
+                            // Approved if on-chain YES > NO, or DB approval flag / status says approved
+                            const approved = m.approved === true || m.status === 'approved' || m.status === 'released' || (total >= 1 && votes.yes > votes.no)
                             const txId = releaseTxId[m.id]
 
                             return (
@@ -328,6 +345,37 @@ export default function GovernancePanel({
                                     </div>
 
                                     {total > 0 && <VoteBar votes={votes} />}
+
+                                    {/* On-Chain Vote Tally & Explorer Links */}
+                                    <div className="mt-2 mb-3 p-2.5 rounded-lg text-xs" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                        <div className="flex items-center justify-between text-[11px] mb-1">
+                                            <span className="text-slate-400 font-semibold">On-Chain Electrum Tally:</span>
+                                            <span className="font-mono font-bold text-emerald-400">
+                                                YES: {oracleTally.yes} GOV · NO: {oracleTally.no} GOV
+                                            </span>
+                                        </div>
+                                        {oracleTally.txids && oracleTally.txids.length > 0 ? (
+                                            <div className="flex flex-wrap gap-1.5 mt-1.5 pt-1.5 border-t border-slate-700/40">
+                                                <span className="text-[10px] text-slate-500">Vote TXs:</span>
+                                                {oracleTally.txids.map(tx => (
+                                                    <a
+                                                        key={tx}
+                                                        href={`https://blockchair.com/bitcoin-cash/transaction/${tx}`}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="text-[10px] font-mono text-emerald-400 underline hover:text-emerald-300"
+                                                        title={tx}
+                                                    >
+                                                        {tx.slice(0, 8)}…{tx.slice(-6)} ↗
+                                                    </a>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <p className="text-[10px] text-slate-500 italic mt-0.5">
+                                                No on-chain vote transactions yet.
+                                            </p>
+                                        )}
+                                    </div>
 
                                     {!approved && (
                                         <div className="flex gap-2">
@@ -365,7 +413,7 @@ export default function GovernancePanel({
                                                 {releaseId === m.id ? <Spinner /> : '🚀 Release Funds to Creator'}
                                             </button>
                                             <p className="text-[10px] text-emerald-500/60 mt-2 text-center italic">
-                                                ✓ Oracle-protected · Quorum verified
+                                                ✓ Oracle-protected · On-chain tally verified (YES &gt; NO)
                                             </p>
                                         </>
                                     )}

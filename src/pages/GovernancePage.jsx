@@ -47,6 +47,7 @@ export default function GovernancePage() {
         votes: 0,
         approved: '0/0'
     })
+    const [onChainTally, setOnChainTally] = useState({ yes: 0, no: 0, txids: [] })
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
@@ -55,11 +56,20 @@ export default function GovernancePage() {
             try {
                 // 1. Fetch Global Voting Stats from Supabase
                 let dbVotesCount = 0
+                let firstProjectId = null
                 if (supabase) {
                     const { count } = await supabase
                         .from('votes')
                         .select('*', { count: 'exact', head: true })
                     dbVotesCount = count || 0
+
+                    const { data: projs } = await supabase
+                        .from('projects')
+                        .select('id')
+                        .limit(1)
+                    if (projs && projs[0]) {
+                        firstProjectId = projs[0].id
+                    }
                 }
 
                 // 2. Fetch User Token Balance if wallet is connected
@@ -74,6 +84,24 @@ export default function GovernancePage() {
                     votes: dbVotesCount || 0,
                     approved: '0/0'
                 })
+
+                // 3. Fetch On-Chain Tally from Oracle /tally endpoint
+                if (firstProjectId) {
+                    try {
+                        const oracleUrl = import.meta.env.VITE_ORACLE_URL || 'http://localhost:3001'
+                        const tr = await fetch(`${oracleUrl}/api/oracle/tally?projectId=${firstProjectId}`)
+                        if (tr.ok) {
+                            const td = await tr.json()
+                            setOnChainTally({
+                                yes: td.yes || 0,
+                                no: td.no || 0,
+                                txids: td.txids || [],
+                            })
+                        }
+                    } catch (tErr) {
+                        console.warn('[GovernancePage] Oracle tally fetch error:', tErr.message)
+                    }
+                }
             } catch (err) {
                 console.error('[GovernancePage] Load error:', err)
             } finally {
@@ -92,13 +120,13 @@ export default function GovernancePage() {
                     padding: '4px 12px', borderRadius: '999px', marginBottom: '12px',
                     background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)',
                 }}>
-                    <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#10b981', letterSpacing: '0.06em' }}>BITCOIN CASH · CHIPNET</span>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#10b981', letterSpacing: '0.06em' }}>BITCOIN CASH · BCH MAINNET</span>
                 </div>
                 <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#f1f5f9', letterSpacing: '-0.03em', marginBottom: '6px' }}>
                     Governance
                 </h1>
                 <p style={{ color: '#64748b', fontSize: '0.9rem' }}>
-                    On-chain voting is currently unavailable until the tally service is verified.
+                    Milestone release proofs are mathematically signed by the Tally Oracle using on-chain CashToken vote balances.
                 </p>
             </div>
 
@@ -106,9 +134,9 @@ export default function GovernancePage() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '16px', marginBottom: '28px' }}>
                 {[
                     { label: 'Token Balance', value: stats.tokens.toLocaleString() + ' GOV', color: '#10b981' },
+                    { label: 'On-Chain YES', value: onChainTally.yes.toLocaleString() + ' GOV', color: '#34d399' },
+                    { label: 'On-Chain NO', value: onChainTally.no.toLocaleString() + ' GOV', color: '#f87171' },
                     { label: 'BCH Balance', value: (stats.balance || 0).toFixed(4) + ' BCH', color: '#06b6d4' },
-                    { label: 'Database Vote Rows', value: stats.votes, color: '#34d399' },
-                    { label: 'Milestone Status', value: stats.approved, color: '#c084fc' },
                 ].map(({ label, value, color }) => (
                     <div key={label} style={{ background: 'rgba(15,17,35,0.85)', border: `1px solid ${color}20`, borderRadius: '14px', padding: '20px', backdropFilter: 'blur(20px)', textAlign: 'center' }}>
                         <p style={{ fontSize: '0.65rem', fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>{label}</p>
@@ -118,6 +146,42 @@ export default function GovernancePage() {
                     </div>
                 ))}
             </div>
+
+            {/* On-Chain Vote Transactions */}
+            {onChainTally.txids && onChainTally.txids.length > 0 && (
+                <div style={{ background: 'rgba(15,17,35,0.85)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: '14px', padding: '18px 22px', marginBottom: '28px' }}>
+                    <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#34d399', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>
+                        Verified On-Chain Vote Transactions ({onChainTally.txids.length})
+                    </p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        {onChainTally.txids.map(tx => (
+                            <a
+                                key={tx}
+                                href={`https://blockchair.com/bitcoin-cash/transaction/${tx}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{
+                                    fontSize: '0.72rem',
+                                    fontFamily: 'monospace',
+                                    color: '#34d399',
+                                    background: 'rgba(16,185,129,0.1)',
+                                    border: '1px solid rgba(16,185,129,0.25)',
+                                    borderRadius: '6px',
+                                    padding: '3px 8px',
+                                    textDecoration: 'none',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                }}
+                            >
+                                <span>🔍</span>
+                                <span>{tx.slice(0, 8)}…{tx.slice(-6)}</span>
+                                <span>↗</span>
+                            </a>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Info cards */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '28px' }}>
@@ -136,7 +200,7 @@ export default function GovernancePage() {
                 </div>
                 <Step num="1" text="Import or generate a session wallet" color="#10b981" />
                 <Step num="2" text='Fund a project to receive on-chain GOV tokens' color="#10b981" />
-                <Step num="3" text="Tokens are sent physically to your Chipnet address" color="#34d399" />
+                <Step num="3" text="Tokens are sent physically to your BCH Mainnet address" color="#34d399" />
                 <Step num="4" text='Broadcast a vote TX to the Approve/Reject scripts' color="#34d399" />
                 <Step num="5" text='Escrow contract validates the oracle proof and releases funds' color="#06b6d4" />
             </div>

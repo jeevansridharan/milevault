@@ -6,7 +6,9 @@ export const GOV_TOKEN_CATEGORY_ID = import.meta.env.VITE_GOV_TOKEN_CATEGORY_ID 
 export const EXPLORER_BASE_URL = IS_MAINNET
   ? 'https://blockchair.com/bitcoin-cash'
   : 'https://chipnet.imaginary.cash'
-export const explorerTxUrl = (txid) => `${EXPLORER_BASE_URL}/tx/${txid}`
+export const explorerTxUrl = (txid) => IS_MAINNET
+  ? `https://blockchair.com/bitcoin-cash/transaction/${txid}`
+  : `https://chipnet.imaginary.cash/tx/${txid}`
 export const explorerAddressUrl = (address) => IS_MAINNET
   ? `https://blockchair.com/bitcoin-cash/address/${address}`
   : `https://chipnet.imaginary.cash/address/${address}`

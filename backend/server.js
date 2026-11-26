@@ -200,6 +200,90 @@ app.get('/api/oracle/pubkey', (_req, res) => {
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 4b. On-chain CashToken Vote Tally Helper
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * getOnChainTally(projectId, milestoneId)
+ *
+ * Scans on-chain Electrum listUnspent for the YES and NO voting addresses
+ * derived in the app. Sums the governance CashToken balances (including unconfirmed)
+ * and returns the exact on-chain counts and transaction hashes for explorer links.
+ */
+async function getOnChainTally(projectId, milestoneId) {
+    const { generateVotingAddresses } = await import('../production/scripts/generateVotingAddresses.js')
+    const BCH_NETWORK = process.env.BCH_NETWORK || 'mainnet'
+    const GOV_TOKEN_CATEGORY = process.env.GOV_TOKEN_CATEGORY_ID || ''
+
+    const { ElectrumNetworkProvider } = await import('cashscript')
+    const provider = new ElectrumNetworkProvider(BCH_NETWORK)
+
+    const scanAddr = async (addr) => {
+        try {
+            return await provider.getUtxos(addr)
+        } catch (err) {
+            console.warn(`[Oracle] Electrum getUtxos warning for ${addr}:`, err.message)
+            return []
+        }
+    }
+
+    let targetId = milestoneId || projectId
+    if (!targetId) throw new Error('projectId or milestoneId is required for on-chain tally')
+
+    let { approveAddr, rejectAddr } = await generateVotingAddresses(targetId)
+    let [yesUtxos, noUtxos] = await Promise.all([scanAddr(approveAddr), scanAddr(rejectAddr)])
+
+    // If milestoneId was specified and has 0 token UTXOs, but projectId is also available,
+    // check projectId addresses so existing project-level votes are counted
+    if (milestoneId && projectId && milestoneId !== projectId) {
+        const hasMilestoneTokens = yesUtxos.some(u => u?.token) || noUtxos.some(u => u?.token)
+        if (!hasMilestoneTokens) {
+            const projAddrs = await generateVotingAddresses(projectId)
+            const [projYes, projNo] = await Promise.all([scanAddr(projAddrs.approveAddr), scanAddr(projAddrs.rejectAddr)])
+            if (projYes.some(u => u?.token) || projNo.some(u => u?.token)) {
+                approveAddr = projAddrs.approveAddr
+                rejectAddr = projAddrs.rejectAddr
+                yesUtxos = projYes
+                noUtxos = projNo
+                targetId = projectId
+            }
+        }
+    }
+
+    const sumTokens = (utxos) => (utxos || []).reduce((acc, u) => {
+        if (u?.token && (!GOV_TOKEN_CATEGORY || u.token.category === GOV_TOKEN_CATEGORY)) {
+            return acc + Number(u.token.amount)
+        }
+        return acc
+    }, 0)
+
+    const getTxids = (utxos) => Array.from(new Set(
+        (utxos || [])
+            .filter(u => u?.token ? (!GOV_TOKEN_CATEGORY || u.token.category === GOV_TOKEN_CATEGORY) : true)
+            .map(u => u.txid)
+            .filter(Boolean)
+    ))
+
+    const yes = sumTokens(yesUtxos)
+    const no = sumTokens(noUtxos)
+    const yesTxids = getTxids(yesUtxos)
+    const noTxids = getTxids(noUtxos)
+    const txids = Array.from(new Set([...yesTxids, ...noTxids]))
+
+    console.log(`[Oracle] On-chain tally (${targetId}) → YES: ${yes} (${yesTxids.length} txs) | NO: ${no} (${noTxids.length} txs)`)
+
+    return {
+        yes,
+        no,
+        txids,
+        yesTxids,
+        noTxids,
+        approveAddr,
+        rejectAddr,
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 5. POST /api/oracle/sign  — the core route
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -260,24 +344,20 @@ app.post('/api/oracle/sign', async (req, res) => {
     }
 
     try {
-        // ── 5b. Query Supabase votes table for this milestone ────────────────
-        console.log('[Oracle] ▶ Querying Supabase votes for milestone:', milestoneId)
-
-        const { data: votes, error: dbError } = await supabase
-            .from('votes')
-            .select('vote, token_amount')
-            .eq('milestone_id', milestoneId)
-
-        if (dbError) {
-            console.error('[Oracle] ✗ Supabase query failed:', dbError.message)
-            return res.status(500).json({ error: `Database error: ${dbError.message}` })
+        // ── 5b. Read Supabase votes (for display / audit logging only) ─────────
+        try {
+            const { data: dbVotes } = await supabase
+                .from('votes')
+                .select('vote, token_amount')
+                .eq('milestone_id', milestoneId)
+            console.log(`[Oracle] ℹ Supabase vote rows for display: ${dbVotes ? dbVotes.length : 0}`)
+        } catch (dbErr) {
+            console.warn('[Oracle] ℹ Supabase query skipped:', dbErr.message)
         }
-
-        console.log(`[Oracle] ✓ Found ${votes.length} vote(s) for milestone ${milestoneId}`)
 
         // ── 5b2. Verify contract is funded on-chain via Electrum ─────────────
         // Load contract address from Supabase (never trust client-submitted values).
-        // token_amount from client body is IGNORED — we read only from the DB.
+        // Client-submitted token amounts are completely IGNORED.
         const { data: contractRows, error: contractErr } = await supabase
             .from('contracts')
             .select('contract_address, deadline')
@@ -321,56 +401,33 @@ app.post('/api/oracle/sign', async (req, res) => {
             return res.status(500).json({ error: `Electrum check failed: ${electrumErr.message}` })
         }
 
-        // ── 5c. Tally YES / NO votes (token-weighted) ────────────────────────
-        let yesVotes = 0
-        let noVotes = 0
-
-        for (const v of votes) {
-            const weight = Number(v.token_amount ?? 1)
-            if (v.vote === true) {
-                yesVotes += weight
-            } else {
-                noVotes += weight
-            }
-        }
-
+        // ── 5c. On-chain CashToken Vote Tally via Electrum ───────────────────
+        // Reads governance CashToken balance at YES/NO addresses derived in the app.
+        // Client-submitted token amount is IGNORED.
+        console.log(`[Oracle] ▶ Reading on-chain CashToken tally for milestone: ${milestoneId} (project: ${projectId})`)
+        const tally = await getOnChainTally(projectId, milestoneId)
+        const yesVotes = tally.yes
+        const noVotes = tally.no
         const totalVotes = yesVotes + noVotes
 
-        console.log(`[Oracle]   YES: ${yesVotes} | NO: ${noVotes} | TOTAL: ${totalVotes}`)
+        console.log(`[Oracle] ✓ On-chain tally: YES=${yesVotes} | NO=${noVotes} (Total=${totalVotes})`)
 
-        // ── 5d. Check quorum ─────────────────────────────────────────────────
-        const QUORUM = 1 // TODO: raise to 3+ for mainnet
-
-        if (totalVotes < QUORUM) {
-            console.log(`[Oracle] ✗ Quorum not met (${totalVotes}/${QUORUM})`)
+        // ── 5d. Oracle signs ONLY IF YES balance > NO balance ─────────────────
+        if (yesVotes <= noVotes) {
+            console.log(`[Oracle] ✗ Vote failed: YES balance (${yesVotes}) <= NO balance (${noVotes})`)
             return res.status(400).json({
                 approved: false,
-                reason: `Quorum not met: ${totalVotes} vote(s) cast, minimum ${QUORUM} required`,
+                reason: `Milestone rejected: On-chain YES CashToken balance (${yesVotes}) must be strictly greater than NO balance (${noVotes}).`,
                 yesVotes,
                 noVotes,
                 totalVotes,
+                txids: tally.txids,
                 milestoneId,
                 projectId,
             })
         }
 
-        // ── 5e. Check >50% approval ──────────────────────────────────────────
-        const approvalRate = yesVotes / totalVotes
-
-        if (approvalRate <= 0.5) {
-            console.log(`[Oracle] ✗ Vote failed (${(approvalRate * 100).toFixed(1)}% YES, need >50%)`)
-            return res.status(400).json({
-                approved: false,
-                reason: `Milestone rejected: ${(approvalRate * 100).toFixed(1)}% YES votes (need >50%)`,
-                yesVotes,
-                noVotes,
-                totalVotes,
-                milestoneId,
-                projectId,
-            })
-        }
-
-        console.log(`[Oracle] ✓ Governance passed (${(approvalRate * 100).toFixed(1)}% YES). Signing…`)
+        console.log(`[Oracle] ✓ Governance passed on-chain (YES: ${yesVotes} > NO: ${noVotes}). Signing release proof…`)
 
         // ── 5f. Build the proof message ──────────────────────────────────────
         // Message = milestoneId_bytes32 (32 bytes) || 0x01 (approved status byte)
@@ -451,12 +508,42 @@ app.post('/api/oracle/sign', async (req, res) => {
             yesVotes,
             noVotes,
             totalVotes,
-            approvalRate: `${(approvalRate * 100).toFixed(1)}%`,
+            txids:        tally.txids,
+            yesTxids:     tally.yesTxids,
+            noTxids:      tally.noTxids,
+            approveAddr:  tally.approveAddr,
+            rejectAddr:   tally.rejectAddr,
         })
 
     } catch (err) {
         console.error('[Oracle] ✗ Unexpected error in /api/oracle/sign:', err)
         return res.status(500).json({ error: `Internal server error: ${err.message}` })
+    }
+})
+
+// ── 5i. GET /api/oracle/tally ─────────────────────────────────────────────────
+// Returns on-chain YES/NO CashToken balances and transaction IDs for explorer links
+app.get('/api/oracle/tally', async (req, res) => {
+    const { projectId, milestoneId } = req.query
+    if (!projectId && !milestoneId) {
+        return res.status(400).json({ error: 'projectId or milestoneId query parameter required' })
+    }
+    try {
+        const tally = await getOnChainTally(projectId, milestoneId)
+        return res.json({
+            yes: tally.yes,
+            no: tally.no,
+            txids: tally.txids,
+            yesTxids: tally.yesTxids,
+            noTxids: tally.noTxids,
+            approveAddr: tally.approveAddr,
+            rejectAddr: tally.rejectAddr,
+            projectId: projectId || null,
+            milestoneId: milestoneId || null,
+        })
+    } catch (err) {
+        console.error('[Oracle] ✗ Error in /api/oracle/tally:', err.message)
+        return res.status(500).json({ error: err.message })
     }
 })
 
