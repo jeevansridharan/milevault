@@ -1,28 +1,41 @@
 /**
  * BlazeInfoBanner.jsx
  * Slim top banner for EMBER2026 / BLAZE submission context.
- * Shows links, donation address with copy, and project context.
+ * Shows links, token-aware donation address with copy, and project context.
  */
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 
 const PRESENTATION_URL = import.meta.env.VITE_PRESENTATION_URL || '#'
-const CASHTOKENS_ADDRESS = import.meta.env.VITE_CASHTOKENS_ADDRESS || ''
+const EMBER_ADDRESS = (import.meta.env.VITE_EMBER_ADDRESS || '').trim()
 
 export default function BlazeInfoBanner() {
     const [copied, setCopied] = useState(false)
+    const [showFull, setShowFull] = useState(false)
+
+    const lower = EMBER_ADDRESS.toLowerCase()
+    const isValid = Boolean(lower && (lower.startsWith('bitcoincash:z') || lower.startsWith('z')))
+
+    useEffect(() => {
+        if (!isValid) {
+            console.error('Invalid CashTokens address: VITE_EMBER_ADDRESS must start with "bitcoincash:z" or "z". Received:', EMBER_ADDRESS || '(empty)')
+        }
+    }, [isValid])
 
     const handleCopy = () => {
-        if (!CASHTOKENS_ADDRESS) return
-        navigator.clipboard.writeText(CASHTOKENS_ADDRESS).then(() => {
+        if (!isValid || !EMBER_ADDRESS) return
+        navigator.clipboard.writeText(EMBER_ADDRESS).then(() => {
             setCopied(true)
             setTimeout(() => setCopied(false), 2000)
         })
     }
 
-    const shortAddr = CASHTOKENS_ADDRESS
-        ? CASHTOKENS_ADDRESS.replace('bitcoincash:', 'q') .slice(0, 10) + '…' + CASHTOKENS_ADDRESS.slice(-6)
-        : ''
+    const clean = EMBER_ADDRESS.replace(/^bitcoincash:/i, '')
+    const shortAddr = clean.length > 18
+        ? `${clean.slice(0, 10)}…${clean.slice(-6)}`
+        : clean
+
+    const displayedAddress = showFull ? EMBER_ADDRESS : shortAddr
 
     return (
         <div style={{
@@ -47,30 +60,66 @@ export default function BlazeInfoBanner() {
             </div>
 
             {/* Donation address */}
-            {CASHTOKENS_ADDRESS && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                    <span style={{ color: '#94a3b8' }}>EMBER2026 donate:</span>
-                    <span style={{
-                        fontFamily: 'monospace', color: '#34d399', fontSize: '0.69rem',
-                        background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)',
-                        borderRadius: '5px', padding: '1px 6px',
-                    }}>{shortAddr}</span>
-                    <button
-                        onClick={handleCopy}
-                        title={CASHTOKENS_ADDRESS}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                <span style={{ color: '#94a3b8' }}>EMBER2026 donate:</span>
+                {isValid ? (
+                    <>
+                        <span
+                            onClick={() => setShowFull(prev => !prev)}
+                            onMouseEnter={() => setShowFull(true)}
+                            onMouseLeave={() => setShowFull(false)}
+                            title={EMBER_ADDRESS}
+                            style={{
+                                fontFamily: 'monospace',
+                                color: '#34d399',
+                                fontSize: '0.69rem',
+                                background: 'rgba(16,185,129,0.1)',
+                                border: '1px solid rgba(16,185,129,0.2)',
+                                borderRadius: '5px',
+                                padding: '1px 6px',
+                                cursor: 'pointer',
+                                wordBreak: 'break-all',
+                                transition: 'all 0.15s ease',
+                                userSelect: 'all',
+                            }}
+                        >
+                            {displayedAddress}
+                        </span>
+                        <button
+                            onClick={handleCopy}
+                            title={EMBER_ADDRESS}
+                            style={{
+                                background: copied ? 'rgba(16,185,129,0.25)' : 'rgba(16,185,129,0.1)',
+                                border: '1px solid rgba(16,185,129,0.3)',
+                                borderRadius: '5px',
+                                cursor: 'pointer',
+                                color: copied ? '#34d399' : '#10b981',
+                                fontSize: '0.65rem',
+                                fontWeight: 700,
+                                padding: '1px 7px',
+                                transition: 'all 0.2s',
+                            }}
+                        >
+                            {copied ? '✓ Copied' : 'Copy'}
+                        </button>
+                    </>
+                ) : (
+                    <span
                         style={{
-                            background: copied ? 'rgba(16,185,129,0.25)' : 'rgba(16,185,129,0.1)',
-                            border: '1px solid rgba(16,185,129,0.3)',
-                            borderRadius: '5px', cursor: 'pointer',
-                            color: copied ? '#34d399' : '#10b981',
-                            fontSize: '0.65rem', fontWeight: 700,
-                            padding: '1px 7px', transition: 'all 0.2s',
+                            fontFamily: 'monospace',
+                            color: '#f87171',
+                            fontSize: '0.69rem',
+                            fontWeight: 600,
+                            background: 'rgba(239,68,68,0.12)',
+                            border: '1px solid rgba(239,68,68,0.35)',
+                            borderRadius: '5px',
+                            padding: '1px 6px',
                         }}
                     >
-                        {copied ? '✓ Copied' : 'Copy'}
-                    </button>
-                </div>
-            )}
+                        Invalid CashTokens address
+                    </span>
+                )}
+            </div>
 
             {/* Context text */}
             <span style={{ color: '#64748b', marginLeft: 'auto', fontStyle: 'italic', flexShrink: 0 }}>
